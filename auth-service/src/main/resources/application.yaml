@@ -1,0 +1,54 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: auth-service
+
+  profiles:
+    active: dev
+
+  datasource:
+    url: jdbc:postgresql://postgres:5432/auth_db
+    username: ${DB_USER:auth_user}
+    password: ${DB_PASSWORD:auth_pass}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    url: jdbc:postgresql://postgres:5432/auth_db
+    user: ${DB_USER:auth_user}
+    password: ${DB_PASSWORD:auth_pass}
+
+  kafka:
+    bootstrap-servers: kafka:9092
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          public-key-location: classpath:keys/public.pem
+
+jwt:
+  secret: ${JWT_SECRET:this_is_a_very_long_secret_key_for_auth_service_123456}
+  access-token-expiration: 900000
+  refresh-token-expiration: 604800000
+
+app:
+  cors:
+    allowed-origins: http://localhost:3000,http://localhost:5173
+
+logging:
+  level:
+    root: INFO
+    org.springframework.security: INFO
+    org.apache.kafka: WARN
