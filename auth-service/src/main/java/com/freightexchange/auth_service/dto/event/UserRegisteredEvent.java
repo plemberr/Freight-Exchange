@@ -17,4 +17,6 @@ public class UserRegisteredEvent {
     private String role;
 
     private LocalDateTime registeredAt;
+    
+    private String name;
 }

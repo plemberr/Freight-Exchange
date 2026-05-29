@@ -21,9 +21,9 @@ class User(Base):
         nullable=False,
     )
 
-    name: Mapped[str] = mapped_column(
+    name: Mapped[str | None] = mapped_column(
         String(255),
-        nullable=False,
+        nullable=True,   # <-- ключевая правка
     )
 
     phone: Mapped[str | None] = mapped_column(
@@ -34,14 +34,17 @@ class User(Base):
     role: Mapped[str] = mapped_column(
         String(32),
         default="USER",
+        nullable=False,
     )
 
     is_blocked: Mapped[bool] = mapped_column(
         Boolean,
         default=False,
+        nullable=False,
     )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,
+        nullable=False,
     )

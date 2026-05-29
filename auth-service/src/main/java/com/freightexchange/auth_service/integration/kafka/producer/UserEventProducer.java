@@ -20,6 +20,8 @@ public class UserEventProducer {
         try {
             String payload = objectMapper.writeValueAsString(event);
 
+            System.out.println("Sending kafka event: " + payload);
+
             kafkaTemplate.send(
                     KafkaTopics.USER_REGISTERED,
                     event.getUserId().toString(),

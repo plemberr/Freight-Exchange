@@ -43,7 +43,10 @@ public class AuthServiceImpl implements AuthService {
                 request.getPassword()
         );
 
-        // ---------------- JWT ----------------
+        String email = user.getEmail();
+        String nameFromEmail = (email != null && email.contains("@"))
+                ? email.substring(0, email.indexOf("@"))
+                : email;
 
         String accessToken = jwtService.generateAccessToken(
                 user.getId().toString(),
@@ -54,16 +57,15 @@ public class AuthServiceImpl implements AuthService {
         RefreshToken refreshToken =
                 refreshTokenService.createRefreshToken(user.getId());
 
-        // ---------------- KAFKA EVENT ----------------
+        UserRegisteredEvent event = UserRegisteredEvent.builder()
+                .userId(user.getId())
+                .email(user.getEmail())
+                .name(nameFromEmail)
+                .role(user.getRole().name())
+                .registeredAt(LocalDateTime.now())
+                .build();
 
-        userEventProducer.publishUserRegistered(
-                UserRegisteredEvent.builder()
-                        .userId(user.getId())
-                        .email(user.getEmail())
-                        .role(user.getRole().name())
-                        .registeredAt(LocalDateTime.now())
-                        .build()
-        );
+        userEventProducer.publishUserRegistered(event);
 
         return AuthResponse.builder()
                 .accessToken(accessToken)
