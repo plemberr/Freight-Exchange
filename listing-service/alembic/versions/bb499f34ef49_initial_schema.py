@@ -29,6 +29,7 @@ def upgrade() -> None:
     sa.Column('description', sa.String(), nullable=True),
     sa.Column('status', sa.Enum('DRAFT', 'MODERATION', 'ACTIVE', 'REJECTED', 'ARCHIVED', name='listingstatus'), nullable=False),
     sa.Column('moderation_comment', sa.String(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_listings_owner_id'), 'listings', ['owner_id'], unique=False)

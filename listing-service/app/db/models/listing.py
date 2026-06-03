@@ -1,6 +1,7 @@
 import uuid
+from datetime import datetime
 
-from sqlalchemy import Enum, String
+from sqlalchemy import Enum, String, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -47,6 +48,12 @@ class Listing(Base):
     moderation_comment: Mapped[str | None] = mapped_column(
         String,
         nullable=True
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow
     )
 
     cargo = relationship(

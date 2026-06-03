@@ -31,6 +31,7 @@ class UpdateListingRequest(BaseModel):
 
 
 class ListingResponse(BaseModel):
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -47,6 +48,9 @@ class ListingResponse(BaseModel):
     transport: TransportRequest | None = None
     route: RouteRequest | None = None
 
-    moderationComment: str | None = Field(default=None, alias="moderation_comment")
+    moderationComment: str | None = Field(
+        default=None,
+        alias="moderation_comment"
+    )
 
-    createdAt: datetime
+    createdAt: datetime = Field(alias="created_at")

@@ -2,9 +2,9 @@ version: "3.9"
 
 services:
 
-  # =========================
+  # ==================================
   # AUTH DATABASE
-  # =========================
+  # ==================================
 
   auth-postgres:
     image: postgres:16
@@ -28,9 +28,9 @@ services:
       timeout: 5s
       retries: 5
 
-  # =========================
+  # ==================================
   # USER DATABASE
-  # =========================
+  # ==================================
 
   user-postgres:
     image: postgres:16
@@ -54,9 +54,35 @@ services:
       timeout: 5s
       retries: 5
 
-  # =========================
+  # ==================================
+  # LISTING DATABASE
+  # ==================================
+
+  listing-postgres:
+    image: postgres:16
+    container_name: listing-postgres
+    restart: always
+
+    environment:
+      POSTGRES_DB: listings_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+    ports:
+      - "5434:5432"
+
+    volumes:
+      - listing_pg_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d listings_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==================================
   # ZOOKEEPER
-  # =========================
+  # ==================================
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
@@ -70,9 +96,9 @@ services:
     ports:
       - "2181:2181"
 
-  # =========================
+  # ==================================
   # KAFKA
-  # =========================
+  # ==================================
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
@@ -104,9 +130,9 @@ services:
 
       ALLOW_PLAINTEXT_LISTENER: "yes"
 
-  # =========================
+  # ==================================
   # AUTH SERVICE
-  # =========================
+  # ==================================
 
   auth-service:
     build:
@@ -137,9 +163,9 @@ services:
     ports:
       - "8081:8081"
 
-  # =========================
+  # ==================================
   # USER SERVICE
-  # =========================
+  # ==================================
 
   user-service:
     build:
@@ -166,6 +192,34 @@ services:
     ports:
       - "8000:8000"
 
+  # ==================================
+  # LISTING SERVICE
+  # ==================================
+
+  listing-service:
+    build:
+      context: ./listing-service
+
+    container_name: listing-service
+
+    restart: always
+
+    depends_on:
+      listing-postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
+    env_file:
+      - ./listing-service/.env
+
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
+    ports:
+      - "8001:8000"
+
 volumes:
   auth_pg_data:
   user_pg_data:
+  listing_pg_data:

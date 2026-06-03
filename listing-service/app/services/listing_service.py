@@ -30,8 +30,12 @@ class ListingService:
         self.point_repo = PointRepository()
         self.route_repo = RouteRepository()
 
-    async def create_listing(self, db: Session, user_id: str, data: CreateListingRequest):
-
+    async def create_listing(
+        self,
+        db: Session,
+        user_id: str,
+        data: CreateListingRequest
+    ):
         try:
             listing = Listing(
                 owner_id=user_id,
@@ -43,8 +47,15 @@ class ListingService:
 
             self.listing_repo.create(db, listing)
 
-            origin = self.point_repo.create(db, Point(**data.route.origin.model_dump()))
-            destination = self.point_repo.create(db, Point(**data.route.destination.model_dump()))
+            origin = self.point_repo.create(
+                db,
+                Point(**data.route.origin.model_dump())
+            )
+
+            destination = self.point_repo.create(
+                db,
+                Point(**data.route.destination.model_dump())
+            )
 
             route = self.route_repo.create_route(
                 db,
@@ -56,7 +67,10 @@ class ListingService:
             )
 
             for idx, wp in enumerate(data.route.waypoints):
-                point = self.point_repo.create(db, Point(**wp.model_dump()))
+                point = self.point_repo.create(
+                    db,
+                    Point(**wp.model_dump())
+                )
 
                 self.route_repo.create_waypoint(
                     db,
@@ -95,11 +109,11 @@ class ListingService:
             db.commit()
             db.refresh(listing)
 
-            await kafka_producer.send(
+            await send_event(
                 LISTING_CREATED_TOPIC,
                 {
-                    "listingId": listing.id,
-                    "ownerId": listing.owner_id,
+                    "listingId": str(listing.id),
+                    "ownerId": str(listing.owner_id),
                     "type": listing.type.value,
                     "status": listing.status.value
                 }
@@ -111,8 +125,34 @@ class ListingService:
             db.rollback()
             raise
 
-    def get_listing(self, db: Session, listing_id: str):
+    # -------------------------
+    # NEW METHOD (FIX)
+    # -------------------------
+    async def delete_listing(
+        self,
+        db: Session,
+        listing_id: str,
+        user_id: str
+    ):
+        listing = self.listing_repo.get_by_id(db, listing_id)
 
+        if not listing:
+            raise HTTPException(404, "Listing not found")
+
+        if listing.owner_id != user_id:
+            raise HTTPException(403, "Forbidden")
+
+        try:
+            self.listing_repo.delete(db, listing)
+            db.commit()
+
+        except Exception:
+            db.rollback()
+            raise
+
+        return {"status": "deleted", "id": listing_id}
+
+    def get_listing(self, db: Session, listing_id: str):
         listing = self.listing_repo.get_by_id(db, listing_id)
 
         if not listing:
@@ -120,17 +160,30 @@ class ListingService:
 
         return listing
 
-    def get_my_listings(self, db: Session, user_id: str, status: str | None = None):
-
+    def get_my_listings(
+        self,
+        db: Session,
+        user_id: str,
+        status: str | None = None
+    ):
         listings = self.listing_repo.get_by_owner(db, user_id)
 
         if status:
-            return [l for l in listings if l.status.value == status]
+            return [
+                listing
+                for listing in listings
+                if listing.status.value == status
+            ]
 
         return listings
 
-    async def update_listing(self, db: Session, listing_id: str, user_id: str, data: UpdateListingRequest):
-
+    async def update_listing(
+        self,
+        db: Session,
+        listing_id: str,
+        user_id: str,
+        data: UpdateListingRequest
+    ):
         listing = self.listing_repo.get_by_id(db, listing_id)
 
         if not listing:
@@ -150,22 +203,34 @@ class ListingService:
                 listing.cargo = Cargo(listing_id=listing.id)
 
             for k, v in data.cargo.model_dump().items():
-                setattr(listing.cargo, k if k != "cargoType" else "cargo_type", v)
+                setattr(
+                    listing.cargo,
+                    k if k != "cargoType" else "cargo_type",
+                    v
+                )
 
         if data.transport:
             if not listing.transport:
                 listing.transport = Transport(listing_id=listing.id)
 
             for k, v in data.transport.model_dump().items():
-                setattr(listing.transport, k if k != "transportType" else "transport_type", v)
+                setattr(
+                    listing.transport,
+                    k if k != "transportType" else "transport_type",
+                    v
+                )
 
         db.commit()
         db.refresh(listing)
 
         return listing
 
-    async def send_to_moderation(self, db: Session, listing_id: str, user_id: str):
-
+    async def send_to_moderation(
+        self,
+        db: Session,
+        listing_id: str,
+        user_id: str
+    ):
         listing = self.listing_repo.get_by_id(db, listing_id)
 
         if not listing:
@@ -175,7 +240,10 @@ class ListingService:
             raise HTTPException(403, "Forbidden")
 
         if listing.status != ListingStatus.DRAFT:
-            raise HTTPException(400, "Only draft listings can be sent to moderation")
+            raise HTTPException(
+                400,
+                "Only draft listings can be sent to moderation"
+            )
 
         listing.status = ListingStatus.MODERATION
 
