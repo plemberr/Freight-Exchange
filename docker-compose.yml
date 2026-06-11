@@ -3,7 +3,7 @@ version: "3.9"
 services:
 
   # ==================================
-  # AUTH DATABASE
+  # DATABASES
   # ==================================
 
   auth-postgres:
@@ -28,9 +28,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # ==================================
-  # USER DATABASE
-  # ==================================
 
   user-postgres:
     image: postgres:16
@@ -54,9 +51,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # ==================================
-  # LISTING DATABASE
-  # ==================================
 
   listing-postgres:
     image: postgres:16
@@ -80,8 +74,32 @@ services:
       timeout: 5s
       retries: 5
 
+
+  moderation-postgres:
+    image: postgres:16
+    container_name: moderation-postgres
+    restart: always
+
+    environment:
+      POSTGRES_DB: moderation_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+    ports:
+      - "5435:5432"
+
+    volumes:
+      - moderation_pg_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d moderation_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
   # ==================================
-  # ZOOKEEPER
+  # KAFKA INFRA
   # ==================================
 
   zookeeper:
@@ -96,9 +114,6 @@ services:
     ports:
       - "2181:2181"
 
-  # ==================================
-  # KAFKA
-  # ==================================
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
@@ -113,7 +128,6 @@ services:
 
     environment:
       KAFKA_BROKER_ID: 1
-
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
 
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
@@ -130,6 +144,7 @@ services:
 
       ALLOW_PLAINTEXT_LISTENER: "yes"
 
+
   # ==================================
   # AUTH SERVICE
   # ==================================
@@ -139,7 +154,6 @@ services:
       context: ./auth-service
 
     container_name: auth-service
-
     restart: always
 
     depends_on:
@@ -150,21 +164,18 @@ services:
 
     environment:
       SPRING_PROFILES_ACTIVE: prod
-
+      SPRING_DATASOURCE_URL: jdbc:postgresql://auth-postgres:5432/auth_db
       DB_USER: auth_user
       DB_PASSWORD: auth_pass
-
-      JWT_SECRET: this_is_a_very_long_secret_key_for_auth_service_123456
-
-      SPRING_DATASOURCE_URL: jdbc:postgresql://auth-postgres:5432/auth_db
-
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JWT_SECRET: this_is_a_very_long_secret_key_for_auth_service_123456
 
     ports:
       - "8081:8081"
 
+
   # ==================================
-  # USER SERVICE
+  # USER SERVICE (Python)
   # ==================================
 
   user-service:
@@ -172,7 +183,6 @@ services:
       context: ./user-service
 
     container_name: user-service
-
     restart: always
 
     depends_on:
@@ -186,11 +196,11 @@ services:
 
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@user-postgres:5432/user_service
-
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
 
     ports:
       - "8000:8000"
+
 
   # ==================================
   # LISTING SERVICE
@@ -201,7 +211,6 @@ services:
       context: ./listing-service
 
     container_name: listing-service
-
     restart: always
 
     depends_on:
@@ -219,7 +228,46 @@ services:
     ports:
       - "8001:8000"
 
+
+  # ==================================
+  # MODERATION SERVICE
+  # ==================================
+
+  moderation-service:
+    build:
+      context: ./moderation-service
+
+    container_name: moderation-service
+
+    restart: always
+
+    depends_on:
+      moderation-postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+
+      SPRING_DATASOURCE_URL: jdbc:postgresql://moderation-postgres:5432/moderation_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
+      JWT_PUBLIC_KEY_PATH: keys/public.pem
+
+    ports:
+      - "8084:8084"
+
+
+# ==================================
+# VOLUMES
+# ==================================
+
 volumes:
   auth_pg_data:
   user_pg_data:
   listing_pg_data:
+  moderation_pg_data:

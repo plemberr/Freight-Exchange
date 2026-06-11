@@ -114,7 +114,25 @@ async def delete_listing(
         listing_id=listing_id,
         user_id=current_user["sub"]
     )
+
     return Response(status_code=204)
+
+
+# SEND TO MODERATION
+@router.post(
+    "/{listing_id}/send-to-moderation",
+    response_model=ListingResponse
+)
+async def send_to_moderation(
+    listing_id: str,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return await service.send_to_moderation(
+        db=db,
+        listing_id=listing_id,
+        user_id=current_user["sub"]
+    )
 
 
 # PUBLISH

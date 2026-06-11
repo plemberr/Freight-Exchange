@@ -18,7 +18,10 @@ from app.repositories.route_repository import RouteRepository
 from app.schemas.listing import CreateListingRequest, UpdateListingRequest
 
 from app.kafka.kafka_producer import send_event
-from app.kafka.topics import LISTING_CREATED_TOPIC
+from app.kafka.topics import (
+    LISTING_CREATED_TOPIC,
+    LISTING_SENT_TO_MODERATION_TOPIC,
+)
 
 
 class ListingService:
@@ -249,5 +252,14 @@ class ListingService:
 
         db.commit()
         db.refresh(listing)
+
+        await send_event(
+            LISTING_SENT_TO_MODERATION_TOPIC,
+            {
+                "listingId": str(listing.id),
+                "listingTitle": listing.title,
+                "ownerId": str(listing.owner_id),
+            }
+        )
 
         return listing

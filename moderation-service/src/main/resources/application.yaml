@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: moderation-service
+
+  profiles:
+    active: dev
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+server:
+  port: 8084
+
+logging:
+  level:
+    root: INFO
+    org.springframework.kafka: INFO
+    org.hibernate.SQL: INFO
+
+jwt:
+  public-key-path: classpath:keys/public.pem
