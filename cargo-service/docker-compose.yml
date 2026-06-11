@@ -1,0 +1,12 @@
+services:
+
+  cargo-service:
+    build: .
+
+    container_name: cargo-service
+
+    ports:
+      - "8006:8000"
+
+    env_file:
+      - .env
