@@ -16,6 +16,9 @@ class Settings(BaseSettings):
 
     KAFKA_BOOTSTRAP_SERVERS: str
 
+    CARGO_SERVICE_URL: str
+    ROUTE_SERVICE_URL: str
+
     @property
     def database_url(self) -> str:
         return (

@@ -23,6 +23,8 @@ from app.kafka.topics import (
     LISTING_SENT_TO_MODERATION_TOPIC,
 )
 
+from app.clients.cargo_client import CargoClient
+from app.clients.route_client import RouteClient
 
 class ListingService:
 
@@ -32,6 +34,8 @@ class ListingService:
         self.transport_repo = TransportRepository()
         self.point_repo = PointRepository()
         self.route_repo = RouteRepository()
+        self.cargo_client = CargoClient()
+        self.route_client = RouteClient()
 
     async def create_listing(
         self,
@@ -60,12 +64,19 @@ class ListingService:
                 Point(**data.route.destination.model_dump())
             )
 
+            route_data = await self.route_client.calculate_route(
+                origin=data.route.origin.model_dump(),
+                destination=data.route.destination.model_dump(),
+                waypoints=[w.model_dump() for w in data.route.waypoints]
+            )
+
             route = self.route_repo.create_route(
                 db,
                 Route(
                     listing_id=listing.id,
                     origin_id=origin.id,
-                    destination_id=destination.id
+                    destination_id=destination.id,
+                    distance_km=route_data["distanceKm"]
                 )
             )
 
@@ -85,13 +96,19 @@ class ListingService:
                 )
 
             if data.cargo:
+                volume = await self.cargo_client.calculate_volume(
+                    data.cargo.length,
+                    data.cargo.width,
+                    data.cargo.height
+                )
+
                 self.cargo_repo.create(
                     db,
                     Cargo(
                         listing_id=listing.id,
                         cargo_type=data.cargo.cargoType,
                         weight=data.cargo.weight,
-                        volume=data.cargo.volume,
+                        volume=volume,
                         length=data.cargo.length,
                         width=data.cargo.width,
                         height=data.cargo.height

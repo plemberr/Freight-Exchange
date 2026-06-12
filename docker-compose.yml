@@ -218,6 +218,10 @@ services:
         condition: service_healthy
       kafka:
         condition: service_started
+      cargo-service:
+        condition: service_started
+      route-service:
+        condition: service_started
 
     env_file:
       - ./listing-service/.env
@@ -261,6 +265,41 @@ services:
     ports:
       - "8084:8084"
 
+  # ==================================
+  # CARGO SERVICE
+  # ==================================
+
+  cargo-service:
+    build:
+      context: ./cargo-service
+
+    container_name: cargo-service
+
+    restart: always
+
+    env_file:
+      - ./cargo-service/.env
+
+    ports:
+      - "8006:8000"
+
+
+  # ==================================
+  # ROUTE SERVICE
+  # ==================================
+
+  route-service:
+    build:
+      context: ./route-service
+
+    container_name: route-service
+    restart: always
+
+    env_file:
+      - ./route-service/.env
+
+    ports:
+      - "8004:8000"
 
 # ==================================
 # VOLUMES

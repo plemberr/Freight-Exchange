@@ -13,5 +13,6 @@ dependencies = [
     "pydantic-settings",
     "python-jose[cryptography]",
     "python-dotenv",
-    "aiokafka"
+    "aiokafka",
+    "httpx"
 ]
