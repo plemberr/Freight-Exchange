@@ -4,7 +4,10 @@ from datetime import datetime
 from app.db.enums.listing import ListingType, ListingStatus
 from app.schemas.cargo import CargoRequest
 from app.schemas.transport import TransportRequest
-from app.schemas.route import RouteRequest
+from app.schemas.route import (
+    RouteRequest,
+    RouteResponse
+)
 
 
 class CreateListingRequest(BaseModel):
@@ -46,7 +49,7 @@ class ListingResponse(BaseModel):
 
     cargo: CargoRequest | None = None
     transport: TransportRequest | None = None
-    route: RouteRequest | None = None
+    route: RouteResponse | None = None
 
     moderationComment: str | None = Field(
         default=None,
