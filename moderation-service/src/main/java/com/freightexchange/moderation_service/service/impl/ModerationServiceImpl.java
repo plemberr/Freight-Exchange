@@ -40,44 +40,38 @@ public class ModerationServiceImpl implements ModerationService {
 
     @Override
     public void approveListing(UUID listingId) {
-
         ModerationQueueItem item = moderationQueueRepository
                 .findByListingId(listingId)
                 .orElseThrow(() -> new ModerationException(
                         "Listing not found in moderation queue"
                 ));
-
-        item.setStatus(ModerationStatus.APPROVED);
-
-        moderationQueueRepository.save(item);
 
         ListingApprovedEvent event = ListingApprovedEvent.builder()
                 .listingId(item.getListingId())
                 .build();
 
         moderationEventsProducer.sendApprovedEvent(event);
+
+        moderationQueueRepository.delete(item);
     }
 
     @Override
     public void rejectListing(UUID listingId, RejectRequest request) {
-
+    
         ModerationQueueItem item = moderationQueueRepository
                 .findByListingId(listingId)
                 .orElseThrow(() -> new ModerationException(
                         "Listing not found in moderation queue"
                 ));
-
-        item.setStatus(ModerationStatus.REJECTED);
-        item.setRejectionReason(request.getReason());
-
-        moderationQueueRepository.save(item);
-
+    
         ListingRejectedEvent event = ListingRejectedEvent.builder()
                 .listingId(item.getListingId())
                 .reason(request.getReason())
                 .build();
-
+    
         moderationEventsProducer.sendRejectedEvent(event);
+    
+        moderationQueueRepository.delete(item);
     }
 
 }

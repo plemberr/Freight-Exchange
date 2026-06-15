@@ -1,8 +1,15 @@
 package com.freightexchange.moderation_service.domain.entity;
 
 import com.freightexchange.moderation_service.domain.enums.ModerationStatus;
+import com.freightexchange.moderation_service.dto.listing.CargoDto;
+import com.freightexchange.moderation_service.dto.listing.RouteDto;
+import com.freightexchange.moderation_service.dto.listing.TransportDto;
+
+import io.hypersistence.utils.hibernate.type.json.JsonType;
+
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Type;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -36,6 +43,24 @@ public class ModerationQueueItem {
     @Column(name = "rejection_reason")
     private String rejectionReason;
 
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
+    @Column(name = "listing_type")
+    private String type;
+
+    @Type(JsonType.class)
+    @Column(name = "cargo", columnDefinition = "jsonb")
+    private CargoDto cargo;
+
+    @Type(JsonType.class)
+    @Column(name = "transport", columnDefinition = "jsonb")
+    private TransportDto transport;
+
+    @Type(JsonType.class)
+    @Column(name = "route", columnDefinition = "jsonb")
+    private RouteDto route;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -52,5 +77,4 @@ public class ModerationQueueItem {
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
-
 }

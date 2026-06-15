@@ -8,6 +8,16 @@ CREATE TABLE moderation_queue
 
     owner_id UUID NOT NULL,
 
+    description TEXT,
+
+    listing_type VARCHAR(50),
+
+    cargo JSONB,
+
+    transport JSONB,
+
+    route JSONB,
+
     status VARCHAR(32) NOT NULL,
 
     rejection_reason TEXT,
@@ -16,3 +26,12 @@ CREATE TABLE moderation_queue
 
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_moderation_queue_status
+    ON moderation_queue(status);
+
+CREATE INDEX idx_moderation_queue_created_at
+    ON moderation_queue(created_at);
+
+CREATE INDEX idx_moderation_queue_owner_id
+    ON moderation_queue(owner_id);

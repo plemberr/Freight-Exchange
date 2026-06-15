@@ -11,3 +11,4 @@ class CargoRequest(BaseModel):
     length: float | None = None
     width: float | None = None
     height: float | None = None
+    price: float | None = None

@@ -41,34 +41,42 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String header = request.getHeader("Authorization");
 
         if (header == null || !header.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
 
         String token = header.substring(7);
 
         if (!jwtService.isTokenValid(token)) {
-            filterChain.doFilter(request, response);
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
 
         Claims claims = jwtService.extractAllClaims(token);
 
-        String username = claims.getSubject();
-        List<String> roles = jwtService.extractRoles(token);
+        String userId = claims.getSubject();
 
-        var authorities = roles.stream()
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
-                .toList();
+        // 🔥 ВАЖНО: берём роль прямо из claims
+        String role = claims.get("role", String.class);
+        System.out.println(claims);
 
-        UsernamePasswordAuthenticationToken auth =
+        if (role == null || role.isBlank()) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            return;
+        }
+
+        var authorities = List.of(
+                new SimpleGrantedAuthority(role)
+        );
+
+        UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(
-                        username,
+                        userId,
                         null,
                         authorities
                 );
 
-        SecurityContextHolder.getContext().setAuthentication(auth);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
 
         filterChain.doFilter(request, response);
     }

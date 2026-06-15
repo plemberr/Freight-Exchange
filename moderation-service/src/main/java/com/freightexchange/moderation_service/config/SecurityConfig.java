@@ -26,7 +26,6 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
-                        // Swagger — ВСЕГДА открыт
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
@@ -34,12 +33,12 @@ public class SecurityConfig {
                                 "/v3/api-docs"
                         ).permitAll()
 
-                        // moderation API — защищён
+                        // 🔥 только модератор
                         .requestMatchers("/api/v1/moderation/**")
-                        .authenticated()
+                        .hasAuthority("ROLE_MODERATOR")
 
-                        // всё остальное тоже закрыто
-                        .anyRequest().authenticated()
+                        .anyRequest()
+                        .authenticated()
                 )
 
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 from typing import Literal
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_current_user_optional
 from app.db.session import SessionLocal
 from app.schemas.listing import (
     CreateListingRequest,
@@ -72,11 +72,13 @@ async def get_my_listings(
 )
 async def get_listing(
     listing_id: str,
+    current_user=Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
     return service.get_listing(
         db=db,
-        listing_id=listing_id
+        listing_id=listing_id,
+        user_id=current_user["sub"] if current_user else None
     )
 
 
@@ -129,23 +131,6 @@ async def send_to_moderation(
     db: Session = Depends(get_db)
 ):
     return await service.send_to_moderation(
-        db=db,
-        listing_id=listing_id,
-        user_id=current_user["sub"]
-    )
-
-
-# PUBLISH
-@router.post(
-    "/{listing_id}/publish",
-    status_code=200
-)
-async def publish_listing(
-    listing_id: str,
-    current_user=Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    return await service.publish_listing(
         db=db,
         listing_id=listing_id,
         user_id=current_user["sub"]

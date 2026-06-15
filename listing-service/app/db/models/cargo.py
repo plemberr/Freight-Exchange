@@ -30,4 +30,6 @@ class Cargo(Base):
     width: Mapped[float | None] = mapped_column(Float)
     height: Mapped[float | None] = mapped_column(Float)
 
+    price: Mapped[float | None] = mapped_column(Float)
+
     listing = relationship("Listing", back_populates="cargo")
