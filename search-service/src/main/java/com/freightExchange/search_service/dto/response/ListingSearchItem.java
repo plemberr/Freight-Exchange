@@ -1,5 +1,6 @@
 package com.freightExchange.search_service.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.freightExchange.search_service.domain.enums.ListingType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,6 +15,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ListingSearchItem {
 
     private UUID id;
@@ -26,11 +28,27 @@ public class ListingSearchItem {
 
     private String destination;
 
+    // --- Поля, специфичные для груза (CARGO) ---
+    private String cargoType;
+
     private BigDecimal weight;
 
     private BigDecimal volume;
 
-    private String cargoType;
+    private BigDecimal length;
+
+    private BigDecimal width;
+
+    private BigDecimal height;
+
+    private BigDecimal price;
+
+    // --- Поля, специфичные для транспорта (TRANSPORT) ---
+    private String transportType;
+
+    private BigDecimal maxVolume;
+
+    private BigDecimal maxWeight;
 
     private LocalDateTime createdAt;
 }

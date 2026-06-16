@@ -1,14 +1,12 @@
 package com.freightExchange.search_service.dto.event;
 
-import com.freightExchange.search_service.domain.enums.ListingStatus;
-import com.freightExchange.search_service.domain.enums.ListingType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -17,23 +15,57 @@ import java.util.UUID;
 @AllArgsConstructor
 public class ListingPublishedEvent {
 
-    private UUID id;
-
-    private ListingType type;
+    private UUID listingId;
+    private UUID ownerId;
 
     private String title;
 
-    private String origin;
+    private String type;
+    private String status;
 
-    private String destination;
+    private Cargo cargo;
+    private Transport transport;
+    private Route route;
 
-    private String cargoType;
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Cargo {
+        private String cargoType;
+        private BigDecimal weight;
+        private BigDecimal volume;
+        private BigDecimal length;
+        private BigDecimal width;
+        private BigDecimal height;
+        private BigDecimal price;
+    }
 
-    private BigDecimal weight;
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Transport {
+        private String transportType;
+        private BigDecimal maxWeight;
+        private BigDecimal maxVolume;
+    }
 
-    private BigDecimal volume;
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Route {
+        private Point origin;
+        private Point destination;
+        private List<Point> waypoints;
+        private Double distanceKm;
+    }
 
-    private ListingStatus status;
-
-    private LocalDateTime createdAt;
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Point {
+        private String city;
+        private String country;
+        private Double latitude;
+        private Double longitude;
+    }
 }

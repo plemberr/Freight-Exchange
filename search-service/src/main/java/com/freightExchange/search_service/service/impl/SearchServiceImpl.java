@@ -71,6 +71,12 @@ public class SearchServiceImpl implements SearchService {
         return switch (sort) {
             case "weight" -> "weight";
             case "volume" -> "volume";
+            case "price" -> "price";
+            case "length" -> "length";
+            case "width" -> "width";
+            case "height" -> "height";
+            case "maxVolume" -> "maxVolume";
+            case "maxWeight" -> "maxWeight";
             case "createdAt" -> "createdAt";
             default -> "createdAt";
         };

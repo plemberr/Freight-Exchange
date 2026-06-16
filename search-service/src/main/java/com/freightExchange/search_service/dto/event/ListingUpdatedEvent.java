@@ -33,6 +33,24 @@ public class ListingUpdatedEvent {
 
     private BigDecimal volume;
 
+    private BigDecimal price;
+
+    // --- Поля, специфичные для груза (CARGO) ---
+    private BigDecimal length;
+
+    private BigDecimal width;
+
+    private BigDecimal height;
+
+    // --- Поля, специфичные для транспорта (TRANSPORT) ---
+    private String transportType;
+
+    private BigDecimal maxVolume;
+
+    private BigDecimal maxWeight;
+
+    private Double distanceKm;
+
     private ListingStatus status;
 
     private LocalDateTime createdAt;

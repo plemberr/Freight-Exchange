@@ -22,11 +22,14 @@ public class SearchController {
 
     @GetMapping("/listings")
     public SearchResponse searchListings(
+
             @RequestParam(required = false) ListingType type,
 
             @RequestParam(required = false) String origin,
 
             @RequestParam(required = false) String destination,
+
+            // ---------- Фильтры груза (CARGO) ----------
 
             @RequestParam(required = false) String cargoType,
 
@@ -37,6 +40,36 @@ public class SearchController {
             @RequestParam(required = false) BigDecimal minVolume,
 
             @RequestParam(required = false) BigDecimal maxVolume,
+
+            @RequestParam(required = false) BigDecimal minPrice,
+
+            @RequestParam(required = false) BigDecimal maxPrice,
+
+            @RequestParam(required = false) BigDecimal minLength,
+
+            @RequestParam(required = false) BigDecimal maxLength,
+
+            @RequestParam(required = false) BigDecimal minWidth,
+
+            @RequestParam(required = false) BigDecimal maxWidth,
+
+            @RequestParam(required = false) BigDecimal minHeight,
+
+            @RequestParam(required = false) BigDecimal maxHeight,
+
+            // ---------- Фильтры транспорта (TRANSPORT) ----------
+
+            @RequestParam(required = false) String transportType,
+
+            @RequestParam(required = false) BigDecimal minMaxWeight,
+
+            @RequestParam(required = false) BigDecimal maxMaxWeight,
+
+            @RequestParam(required = false) BigDecimal minMaxVolume,
+
+            @RequestParam(required = false) BigDecimal maxMaxVolume,
+
+            // ---------- Пагинация и сортировка ----------
 
             @RequestParam(defaultValue = "0")
             @Min(0)
@@ -63,6 +96,19 @@ public class SearchController {
                 .maxWeight(maxWeight)
                 .minVolume(minVolume)
                 .maxVolume(maxVolume)
+                .minPrice(minPrice)
+                .maxPrice(maxPrice)
+                .minLength(minLength)
+                .maxLength(maxLength)
+                .minWidth(minWidth)
+                .maxWidth(maxWidth)
+                .minHeight(minHeight)
+                .maxHeight(maxHeight)
+                .transportType(transportType)
+                .minMaxWeight(minMaxWeight)
+                .maxMaxWeight(maxMaxWeight)
+                .minMaxVolume(minMaxVolume)
+                .maxMaxVolume(maxMaxVolume)
                 .page(page)
                 .size(size)
                 .sort(sort)

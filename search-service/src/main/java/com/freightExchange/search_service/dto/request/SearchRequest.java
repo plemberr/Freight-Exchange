@@ -20,6 +20,7 @@ public class SearchRequest {
 
     private String destination;
 
+    // --- Фильтры, специфичные для груза (CARGO) ---
     private String cargoType;
 
     private BigDecimal minWeight;
@@ -29,6 +30,35 @@ public class SearchRequest {
     private BigDecimal minVolume;
 
     private BigDecimal maxVolume;
+
+    private BigDecimal minPrice;
+
+    private BigDecimal maxPrice;
+
+    private BigDecimal minLength;
+
+    private BigDecimal maxLength;
+
+    private BigDecimal minWidth;
+
+    private BigDecimal maxWidth;
+
+    private BigDecimal minHeight;
+
+    private BigDecimal maxHeight;
+
+    // --- Фильтры, специфичные для транспорта (TRANSPORT) ---
+    private String transportType;
+
+    // диапазон по максимальной грузоподъёмности транспорта (поле maxWeight у TRANSPORT)
+    private BigDecimal minMaxWeight;
+
+    private BigDecimal maxMaxWeight;
+
+    // диапазон по максимальному объёму транспорта (поле maxVolume у TRANSPORT)
+    private BigDecimal minMaxVolume;
+
+    private BigDecimal maxMaxVolume;
 
     @Builder.Default
     private Integer page = 0;

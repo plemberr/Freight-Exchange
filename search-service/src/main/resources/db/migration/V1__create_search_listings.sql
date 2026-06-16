@@ -16,6 +16,10 @@ CREATE TABLE search_listings
 
     volume NUMERIC(12,2),
 
+    price NUMERIC(12,2),
+
+    distance_km DOUBLE PRECISION,
+
     status VARCHAR(20) NOT NULL,
 
     created_at TIMESTAMP NOT NULL
@@ -38,3 +42,9 @@ CREATE INDEX idx_search_listings_status
 
 CREATE INDEX idx_search_listings_created_at
     ON search_listings(created_at);
+
+CREATE INDEX idx_search_listings_price
+    ON search_listings(price);
+
+CREATE INDEX idx_search_listings_distance
+    ON search_listings(distance_km);

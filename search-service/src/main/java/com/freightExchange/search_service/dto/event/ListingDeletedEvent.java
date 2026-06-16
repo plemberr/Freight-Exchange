@@ -13,6 +13,5 @@ import java.util.UUID;
 @AllArgsConstructor
 public class ListingDeletedEvent {
 
-    private UUID id;
-
+    private UUID listingId;
 }

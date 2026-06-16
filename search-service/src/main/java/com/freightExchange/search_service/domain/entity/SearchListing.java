@@ -18,7 +18,12 @@ import java.util.UUID;
                 @Index(name = "idx_search_listing_destination", columnList = "destination"),
                 @Index(name = "idx_search_listing_cargo_type", columnList = "cargo_type"),
                 @Index(name = "idx_search_listing_status", columnList = "status"),
-                @Index(name = "idx_search_listing_created_at", columnList = "created_at")
+                @Index(name = "idx_search_listing_created_at", columnList = "created_at"),
+                @Index(name = "idx_search_listing_price", columnList = "price"),
+                @Index(name = "idx_search_listing_distance", columnList = "distance_km"),
+                @Index(name = "idx_search_listing_transport_type", columnList = "transport_type"),
+                @Index(name = "idx_search_listing_max_volume", columnList = "max_volume"),
+                @Index(name = "idx_search_listing_max_weight", columnList = "max_weight")
         }
 )
 @Getter
@@ -52,6 +57,32 @@ public class SearchListing {
 
     @Column(precision = 12, scale = 2)
     private BigDecimal volume;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal price;
+
+    // --- Поля, специфичные для груза (CARGO) ---
+    @Column(precision = 12, scale = 2)
+    private BigDecimal length;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal width;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal height;
+
+    // --- Поля, специфичные для транспорта (TRANSPORT) ---
+    @Column(name = "max_volume", precision = 12, scale = 2)
+    private BigDecimal maxVolume;
+
+    @Column(name = "max_weight", precision = 12, scale = 2)
+    private BigDecimal maxWeight;
+
+    @Column(name = "transport_type", length = 100)
+    private String transportType;
+
+    @Column(name = "distance_km")
+    private Double distanceKm;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

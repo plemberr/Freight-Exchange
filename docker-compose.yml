@@ -98,6 +98,29 @@ services:
       retries: 5
 
 
+  search-postgres:
+    image: postgres:16
+    container_name: search-postgres
+    restart: always
+
+    environment:
+      POSTGRES_DB: search_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+    ports:
+      - "5436:5432"
+
+    volumes:
+      - search_pg_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d search_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
   # ==================================
   # KAFKA INFRA
   # ==================================
@@ -128,6 +151,7 @@ services:
 
     environment:
       KAFKA_BROKER_ID: 1
+
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
 
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
@@ -159,15 +183,20 @@ services:
     depends_on:
       auth-postgres:
         condition: service_healthy
+
       kafka:
         condition: service_started
 
     environment:
       SPRING_PROFILES_ACTIVE: prod
+
       SPRING_DATASOURCE_URL: jdbc:postgresql://auth-postgres:5432/auth_db
+
       DB_USER: auth_user
       DB_PASSWORD: auth_pass
+
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
       JWT_SECRET: this_is_a_very_long_secret_key_for_auth_service_123456
 
     ports:
@@ -175,7 +204,7 @@ services:
 
 
   # ==================================
-  # USER SERVICE (Python)
+  # USER SERVICE
   # ==================================
 
   user-service:
@@ -188,6 +217,7 @@ services:
     depends_on:
       user-postgres:
         condition: service_healthy
+
       kafka:
         condition: service_started
 
@@ -196,6 +226,7 @@ services:
 
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@user-postgres:5432/user_service
+
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
 
     ports:
@@ -216,10 +247,13 @@ services:
     depends_on:
       listing-postgres:
         condition: service_healthy
+
       kafka:
         condition: service_started
+
       cargo-service:
         condition: service_started
+
       route-service:
         condition: service_started
 
@@ -242,12 +276,12 @@ services:
       context: ./moderation-service
 
     container_name: moderation-service
-
     restart: always
 
     depends_on:
       moderation-postgres:
         condition: service_healthy
+
       kafka:
         condition: service_started
 
@@ -255,6 +289,7 @@ services:
       SPRING_PROFILES_ACTIVE: prod
 
       SPRING_DATASOURCE_URL: jdbc:postgresql://moderation-postgres:5432/moderation_db
+
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
 
@@ -265,6 +300,39 @@ services:
     ports:
       - "8084:8084"
 
+
+  # ==================================
+  # SEARCH SERVICE
+  # ==================================
+
+  search-service:
+    build:
+      context: ./search-service
+      dockerfile: Dockerfile
+
+    container_name: search-service
+    restart: always
+
+    depends_on:
+      search-postgres:
+        condition: service_healthy
+
+      kafka:
+        condition: service_started
+
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+
+      SPRING_DATASOURCE_URL: jdbc:postgresql://search-postgres:5432/search_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
+    ports:
+      - "8085:8085"
+
+
   # ==================================
   # CARGO SERVICE
   # ==================================
@@ -274,7 +342,6 @@ services:
       context: ./cargo-service
 
     container_name: cargo-service
-
     restart: always
 
     env_file:
@@ -301,6 +368,7 @@ services:
     ports:
       - "8004:8000"
 
+
 # ==================================
 # VOLUMES
 # ==================================
@@ -310,3 +378,4 @@ volumes:
   user_pg_data:
   listing_pg_data:
   moderation_pg_data:
+  search_pg_data:

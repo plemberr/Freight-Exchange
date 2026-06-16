@@ -1,9 +1,8 @@
 package com.freightExchange.search_service.kafka.consumer;
 
-import com.freightExchange.search_service.dto.event.ListingCreatedEvent;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.freightExchange.search_service.dto.event.ListingDeletedEvent;
 import com.freightExchange.search_service.dto.event.ListingPublishedEvent;
-import com.freightExchange.search_service.dto.event.ListingUpdatedEvent;
 import com.freightExchange.search_service.kafka.KafkaTopics;
 import com.freightExchange.search_service.service.IndexingService;
 import lombok.RequiredArgsConstructor;
@@ -17,68 +16,43 @@ import org.springframework.stereotype.Component;
 public class ListingEventsConsumer {
 
     private final IndexingService indexingService;
+    private final ObjectMapper objectMapper;
 
     @KafkaListener(
-            topics = KafkaTopics.LISTING_CREATED,
+            topics = KafkaTopics.LISTING_PUBLISHED,
             groupId = "search-service-group"
     )
-    public void consumeCreated(
-            ListingCreatedEvent event
-    ) {
+    public void consumePublished(String message) {
 
-        log.info(
-                "Received listing.created event: {}",
-                event.getId()
-        );
+        try {
+            ListingPublishedEvent event =
+                    objectMapper.readValue(message, ListingPublishedEvent.class);
 
-        indexingService.handleListingCreated(event);
-    }
+            log.info("Received listing.published: {}", event.getListingId());
 
-    @KafkaListener(
-            topics = KafkaTopics.LISTING_UPDATED,
-            groupId = "search-service-group"
-    )
-    public void consumeUpdated(
-            ListingUpdatedEvent event
-    ) {
+            indexingService.handleListingPublished(event);
 
-        log.info(
-                "Received listing.updated event: {}",
-                event.getId()
-        );
-
-        indexingService.handleListingUpdated(event);
+        } catch (Exception e) {
+            log.error("Failed to parse listing.published event", e);
+        }
     }
 
     @KafkaListener(
             topics = KafkaTopics.LISTING_DELETED,
             groupId = "search-service-group"
     )
-    public void consumeDeleted(
-            ListingDeletedEvent event
-    ) {
+    public void consumeDeleted(String message) {
 
-        log.info(
-                "Received listing.deleted event: {}",
-                event.getId()
-        );
+        try {
+            ListingDeletedEvent event =
+                    objectMapper.readValue(message, ListingDeletedEvent.class);
 
-        indexingService.handleListingDeleted(event);
-    }
+            log.info("Received listing.deleted: {}", event.getListingId());
 
-    @KafkaListener(
-            topics = KafkaTopics.LISTING_PUBLISHED,
-            groupId = "search-service-group"
-    )
-    public void consumePublished(
-            ListingPublishedEvent event
-    ) {
+            indexingService.handleListingDeleted(event);
 
-        log.info(
-                "Received listing.published event: {}",
-                event.getId()
-        );
-
-        indexingService.handleListingPublished(event);
+        } catch (Exception e) {
+            log.error("Failed to parse listing.deleted event", e);
+        }
     }
 }

@@ -18,9 +18,16 @@ public class SearchMapper {
                 .title(entity.getTitle())
                 .origin(entity.getOrigin())
                 .destination(entity.getDestination())
+                .cargoType(entity.getCargoType())
                 .weight(entity.getWeight())
                 .volume(entity.getVolume())
-                .cargoType(entity.getCargoType())
+                .length(entity.getLength())
+                .width(entity.getWidth())
+                .height(entity.getHeight())
+                .price(entity.getPrice())
+                .transportType(entity.getTransportType())
+                .maxVolume(entity.getMaxVolume())
+                .maxWeight(entity.getMaxWeight())
                 .createdAt(entity.getCreatedAt())
                 .build();
     }
