@@ -99,6 +99,8 @@
         var pass = (passEl && passEl.value || "");
         var emailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
         setFieldError(emailEl, emailOk ? null : "Введите корректный адрес почты");
+        var passOk = pass.length >= 8;
+        setFieldError(passEl, passOk ? null : "Пароль должен содержать минимум 8 символов");
         if (!emailOk || !passOk) return;
 
         var op = mode === "register" ? API.auth.register(email, pass) : API.auth.login(email, pass);
