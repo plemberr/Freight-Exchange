@@ -579,7 +579,7 @@
     // -------------------------
     // LOAD DATA
     // -------------------------
-    API.listings.get(id).then(function (data) {
+    API.listings.get(id, { auth: true }).then(function (data) {
       if (!data) return;
 
       setField("route.origin.country", data.route?.origin?.country);
