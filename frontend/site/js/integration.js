@@ -141,7 +141,7 @@
       var v = sortSel ? sortSel.value : "";
       if (v === "По цене") return { sort: "price", order: "asc" };
       if (v === "По расстоянию") return { sort: "distanceKm", order: "asc" };
-      return { sort: "createdAt", order: "desc" };
+      return { sort: "created_at", order: "desc" };
     }
     function run() {
       var q = Object.assign({ type: type, page: 0, size: 20 }, sortParams());
@@ -172,7 +172,7 @@
         if (it.maxWeight != null) meta.push("<span>до " + fmtNum(it.maxWeight) + " т</span>");
         if (it.maxVolume != null) meta.push("<span>до " + fmtNum(it.maxVolume) + " м³</span>");
       }
-      if (it.createdAt) meta.push("<span>" + fmtDate(it.createdAt) + "</span>");
+      if (it.created_at) meta.push("<span>" + fmtDate(it.created_at) + "</span>");
       var detail = (type === "CARGO" ? "listing-detail.html" : "listing-detail-transport.html") + "?id=" + encodeURIComponent(it.id);
       var price = (type === "CARGO" && it.price != null)
         ? '<div><div class="price">' + fmtNum(it.price) + ' €</div><div class="price__sub">за перевозку</div></div>' : "";
@@ -252,7 +252,7 @@
         + '<td><div class="ad-route">' + routeText(it.route) + '</div><span class="status ' + st[1] + '">' + esc(st[0]) + '</span></td>'
         + '<td>' + typeWeight + '</td>'
         + '<td class="ad-price">' + price + '</td>'
-        + '<td>' + fmtDate(it.createdAt) + '</td>'
+        + '<td>' + fmtDate(it.created_at) + '</td>'
         + '<td class="td-actions">'
         + '<a href="' + detail + '" class="icon-btn" aria-label="Просмотр">' + eye + '</a>'
         + '<a href="' + edit + '" class="icon-btn" aria-label="Редактировать">' + pen + '</a>'
