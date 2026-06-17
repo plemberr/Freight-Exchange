@@ -15,6 +15,7 @@
     wireCabinet();         // cabinet.html — мои объявления
     wireModerationQueue(); // moderator.html — очередь
     wireLogout();
+    wireLoginButton();
   });
   // ещё раз после полной загрузки — перебить возможный показ ссылки из site.js
   window.addEventListener("load", wireModeratorLink);
@@ -318,4 +319,46 @@
       });
     });
   }
+
+  // ============================================================
+  // КНОПКА ВОЙТИ / ВЫЙТИ В ШАПКЕ
+  // ============================================================
+  function wireLoginButton() {
+    var btn = document.querySelector("[data-login-btn]");
+    if (!btn) return;
+
+    var textNode = Array.from(btn.childNodes).find(function (node) {
+      return node.nodeType === Node.TEXT_NODE;
+    });
+
+    if (API.tokens.isAuthed) {
+
+      if (textNode) {
+        textNode.textContent = "Выйти ";
+      }
+
+      btn.removeAttribute("href");
+
+      btn.addEventListener("click", function (e) {
+        e.preventDefault();
+
+        API.auth.logout()
+          .then(function () {
+            window.location.href = "index.html";
+          })
+          .catch(function () {
+            window.location.href = "index.html";
+          });
+      });
+
+    } else {
+
+      if (textNode) {
+        textNode.textContent = "Войти ";
+      }
+
+      btn.setAttribute("href", "auth.html");
+    }
+  }
+
 })();
