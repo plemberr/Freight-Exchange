@@ -241,7 +241,9 @@ window.FreightAPI = (function () {
         request("/listings/", { auth: true }),
 
       get: (id) =>
-        request("/listings/" + encodeURIComponent(id)),
+        request("/listings/" + encodeURIComponent(id), {
+          auth: true
+        }),
 
       update: (id, payload) =>
         request("/listings/" + encodeURIComponent(id), {
