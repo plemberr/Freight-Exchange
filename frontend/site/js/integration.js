@@ -19,6 +19,7 @@
     wireCreateCargo();
     wireCreateTransport();
     wireSettings();
+    wireEditTransport();
   });
   // ещё раз после полной загрузки — перебить возможный показ ссылки из site.js
   window.addEventListener("load", wireModeratorLink);
@@ -549,5 +550,95 @@
             }
           });
       });
+  }
+
+  // ============================================================
+  // EDIT TRANSPORT
+  // ============================================================
+  function wireEditTransport() {
+    if (document.body.dataset.page !== "edit-transport") return;
+
+    var id = new URLSearchParams(location.search).get("id");
+    if (!id) return;
+
+    var form = document.querySelector("form");
+    if (!form) return;
+
+    var btn = form.querySelector("button[type='submit']");
+
+    function setField(key, value) {
+      var el = form.querySelector('[data-field="' + key + '"]');
+      if (el) el.value = value ?? "";
     }
+
+    function getField(key) {
+      var el = form.querySelector('[data-field="' + key + '"]');
+      return el ? el.value : "";
+    }
+
+    // -------------------------
+    // LOAD DATA
+    // -------------------------
+    API.listings.get(id).then(function (data) {
+      if (!data) return;
+
+      setField("route.origin.country", data.route?.origin?.country);
+      setField("route.origin.city", data.route?.origin?.city);
+
+      setField("route.destination.country", data.route?.destination?.country);
+      setField("route.destination.city", data.route?.destination?.city);
+
+      setField("transport.transportType", data.transport?.transportType);
+      setField("transport.maxWeight", data.transport?.maxWeight);
+      setField("transport.maxVolume", data.transport?.maxVolume);
+
+      setField("description", data.description);
+      setField("title", data.title);
+    });
+
+    // -------------------------
+    // SAVE DATA
+    // -------------------------
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      var payload = {
+        type: "TRANSPORT",
+        title: getField("title"),
+        description: getField("description"),
+
+        route: {
+          origin: {
+            country: getField("route.origin.country"),
+            city: getField("route.origin.city")
+          },
+          destination: {
+            country: getField("route.destination.country"),
+            city: getField("route.destination.city")
+          },
+          waypoints: []
+        },
+
+        transport: {
+          transportType: getField("transport.transportType"),
+          maxWeight: Number(getField("transport.maxWeight")),
+          maxVolume: Number(getField("transport.maxVolume"))
+        }
+      };
+
+      btn.disabled = true;
+
+      API.listings.update(id, payload)
+        .then(function () {
+          window.location.href = "cabinet.html";
+        })
+        .catch(function (err) {
+          console.error(err);
+          alert("Ошибка сохранения");
+        })
+        .finally(function () {
+          btn.disabled = false;
+        });
+    });
+  }
 })();
