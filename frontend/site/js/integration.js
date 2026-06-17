@@ -98,18 +98,17 @@
 
       form.addEventListener("submit", function (e) {
         e.preventDefault();
-      
+
         var email = (emailEl && emailEl.value || "").trim();
         var pass = (passEl && passEl.value || "");
-      
+
         var emailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
         setFieldError(emailEl, emailOk ? null : "Введите корректный адрес почты");
-      
+
         var isRegister = mode === "register";
-      
-        // пароль проверяем ТОЛЬКО при регистрации
+
         var passOk = true;
-      
+
         if (isRegister) {
           passOk = pass.length >= 8;
           setFieldError(
@@ -117,22 +116,22 @@
             passOk ? null : "Пароль должен содержать минимум 8 символов"
           );
         } else {
-          setFieldError(passEl, null); // убираем любые ошибки при login
+          setFieldError(passEl, null);
         }
-      
+
         if (!emailOk || !passOk) return;
-      
+
         var op =
           isRegister
             ? API.auth.register(email, pass)
             : API.auth.login(email, pass);
-      
+
         if (submitBtn) {
           submitBtn.disabled = true;
           submitBtn.dataset._t = submitBtn.textContent;
           submitBtn.textContent = "Подождите…";
         }
-      
+
         op.then(function () {
           window.location.href = redirect;
         }).catch(function (err) {
@@ -142,7 +141,7 @@
               : err && err.status === 409
               ? "Пользователь с такой почтой уже существует"
               : (err && err.message) || "Не удалось выполнить запрос";
-      
+
           setFieldError(passEl, msg);
         }).then(function () {
           if (submitBtn) {
@@ -171,7 +170,6 @@
     var sortSel = document.querySelector(".results__head .select");
     var applyBtn = document.querySelector(".filters .btn--block");
 
-    // сразу убираем статичную демо-разметку, чтобы не мелькала
     listEl.innerHTML = info("Загрузка объявлений…");
 
     function sortParams() {
@@ -236,14 +234,12 @@
   function wireCabinet() {
     var menu = document.querySelector("[data-account-menu]");
     var table = document.querySelector(".ad-table");
-    if (!menu || !table) return; // это именно кабинет (у чужого профиля меню нет)
+    if (!menu || !table) return;
 
     if (!API.tokens.isAuthed) { window.location.replace("auth.html"); return; }
 
-    // профиль пользователя
     API.users.me()
       .then(function (user) {
-
         var email = user.email;
         var name = user.name || email.split("@")[0];
 
@@ -251,22 +247,13 @@
         var mailEl = document.querySelector(".profile-card__email");
         var avatar = document.querySelector(".avatar");
 
-        if (nameEl) {
-          nameEl.textContent = name;
-        }
-
-        if (mailEl) {
-          mailEl.textContent = email;
-        }
-
-        if (avatar) {
-          avatar.textContent = (name[0] || "U").toUpperCase();
-        }
+        if (nameEl) nameEl.textContent = name;
+        if (mailEl) mailEl.textContent = email;
+        if (avatar) avatar.textContent = (name[0] || "U").toUpperCase();
       })
       .catch(function (err) {
         console.error("Не удалось загрузить профиль:", err);
       });
-
 
     var tbody = table.querySelector("tbody");
     function load() {
@@ -377,325 +364,369 @@
   // КНОПКА ВОЙТИ / ВЫЙТИ В ШАПКЕ
   // ============================================================
   function wireLoginButton() {
-      console.log("wireLoginButton called");
+    console.log("wireLoginButton called");
 
-      var btn = document.querySelector("[data-login-btn]");
-      if (!btn) return;
+    var btn = document.querySelector("[data-login-btn]");
+    if (!btn) return;
 
-      var actions = btn.parentElement;
+    var actions = btn.parentElement;
+    var authed = API.tokens.isAuthed;
+    console.log("isAuthed =", authed);
 
-      var authed = API.tokens.isAuthed;
-      console.log("isAuthed =", authed);
+    var oldProfile = document.querySelector("[data-profile-btn]");
+    if (oldProfile) oldProfile.remove();
 
-      // всегда удаляем старую кнопку профиля (чтобы не было дублей)
-      var oldProfile = document.querySelector("[data-profile-btn]");
-      if (oldProfile) oldProfile.remove();
+    if (authed) {
+      var profileBtn = document.createElement("a");
+      profileBtn.href = "cabinet.html";
+      profileBtn.className = "btn btn--outline";
+      profileBtn.setAttribute("data-profile-btn", "");
+      profileBtn.textContent = "Профиль";
 
-      if (authed) {
-        // создать "Профиль"
-        var profileBtn = document.createElement("a");
-        profileBtn.href = "cabinet.html";
-        profileBtn.className = "btn btn--outline";
-        profileBtn.setAttribute("data-profile-btn", "");
-        profileBtn.textContent = "Профиль";
+      actions.insertBefore(profileBtn, btn);
 
-        actions.insertBefore(profileBtn, btn);
+      btn.innerHTML = 'Выйти <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path></svg>';
+      btn.removeAttribute("href");
 
-        // изменить кнопку логина на "Выйти"
-        btn.innerHTML = 'Выйти <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path></svg>';
-
-        btn.removeAttribute("href");
-
-        btn.onclick = function (e) {
-          e.preventDefault();
-          API.auth.logout().then(function () {
-            window.location.href = "index.html";
-          });
-        };
-
-      } else {
-        btn.innerHTML = 'Войти <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path></svg>';
-        btn.setAttribute("href", "auth.html");
-      }
+      btn.onclick = function (e) {
+        e.preventDefault();
+        API.auth.logout().then(function () {
+          window.location.href = "index.html";
+        });
+      };
+    } else {
+      btn.innerHTML = 'Войти <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path></svg>';
+      btn.setAttribute("href", "auth.html");
     }
+  }
 
-  function wireCreateCargo() {
-      console.log("wireCreateCargo init");
-
-      if (document.body.dataset.page !== "cargo") return;
-
-      const btn = document.getElementById("publishBtn");
-      if (!btn) {
-        console.warn("publishBtn not found");
-        return;
-      }
-
-      btn.addEventListener("click", async function () {
-        console.log("CLICK publish cargo");
-
-        const payload = {
-          type: "CARGO",
-          title: getVal(0, 0),
-          description: getTextarea(),
-          route: buildRoute(),
-          cargo: {
-            cargoType: getSelect(1, 0),
-            weight: Number(getVal(1, 1)),
-            length: Number(getVal(1, 2)),
-            width: Number(getVal(1, 3)),
-            height: Number(getVal(1, 4)),
-            volume: null,
-            price: Number(getVal(2, 0))
-          }
-        };
-
-        console.log("PAYLOAD:", payload);
-
-        try {
-          const res = await API.listings.create(payload);
-          console.log("CREATED:", res);
-
-          window.location.href = "cabinet.html";
-        } catch (e) {
-          console.error("CREATE ERROR:", e);
-          alert("Ошибка создания объявления");
-        }
-      });
-    }
-
-  function wireCreateTransport() {
-      console.log("wireCreateTransport init");
-
-      if (document.body.dataset.page !== "transport") return;
-
-      const btn = document.getElementById("publishBtn");
-      if (!btn) return;
-
-      btn.addEventListener("click", async function () {
-        console.log("CLICK publish transport");
-
-        const payload = {
-          type: "TRANSPORT",
-          title: getVal(0, 0),
-          description: getTextarea(),
-          route: buildRoute(),
-          transport: {
-            transportType: getSelect(1, 0),
-            maxWeight: Number(getVal(1, 1)),
-            maxVolume: Number(getVal(1, 2))
-          }
-        };
-
-        console.log("PAYLOAD:", payload);
-
-        try {
-          await API.listings.create(payload);
-          window.location.href = "cabinet.html";
-        } catch (e) {
-          console.error(e);
-          alert("Ошибка создания транспорта");
-        }
-      });
-    }
-
+  // ============================================================
+  // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ СБОРА ДАННЫХ ИЗ ВИЗАРДА
+  // ============================================================
   function getVal(stepIndex, inputIndex) {
-    const step = document.querySelectorAll("[data-wizard-step]")[stepIndex];
-    const inputs = step.querySelectorAll("input, select, textarea");
-    return inputs[inputIndex]?.value?.trim() || null;
+    var step = document.querySelectorAll("[data-wizard-step]")[stepIndex];
+    if (!step) return null;
+    var inputs = step.querySelectorAll("input, select, textarea");
+    return (inputs[inputIndex] && inputs[inputIndex].value && inputs[inputIndex].value.trim()) || null;
   }
-  
+
   function getSelect(stepIndex, index) {
-    const step = document.querySelectorAll("[data-wizard-step]")[stepIndex];
-    const sel = step.querySelectorAll("select")[index];
-    return sel?.value || null;
+    var step = document.querySelectorAll("[data-wizard-step]")[stepIndex];
+    if (!step) return null;
+    var sel = step.querySelectorAll("select")[index];
+    return sel ? sel.value : null;
   }
-  
+
   function getTextarea() {
-    const ta = document.querySelector("textarea");
-    return ta?.value?.trim() || "";
+    var ta = document.querySelector("textarea");
+    return ta ? (ta.value || "").trim() : "";
   }
-  
+
   function buildRoute() {
-    const inputs = document.querySelectorAll(".wizard-step input");
-  
+    var inputs = document.querySelectorAll(".wizard-step input");
     return {
       origin: {
-        country: inputs[0]?.value,
-        city: inputs[1]?.value
+        country: (inputs[0] && inputs[0].value) || "",
+        city: (inputs[1] && inputs[1].value) || ""
       },
       destination: {
-        country: inputs[3]?.value,
-        city: inputs[4]?.value
+        country: (inputs[3] && inputs[3].value) || "",
+        city: (inputs[4] && inputs[4].value) || ""
       },
       waypoints: []
     };
+  }
+
+  function buildCargoPayload() {
+    return {
+      type: "CARGO",
+      title: getVal(0, 0) || "Объявление о грузе",
+      description: getTextarea(),
+      route: buildRoute(),
+      cargo: {
+        cargoType: getSelect(1, 0),
+        weight: Number(getVal(1, 1)) || 0,
+        length: Number(getVal(1, 2)) || 0,
+        width: Number(getVal(1, 3)) || 0,
+        height: Number(getVal(1, 4)) || 0,
+        volume: null,
+        price: Number(getVal(2, 0)) || 0
+      }
+    };
+  }
+
+  function buildTransportPayload() {
+    return {
+      type: "TRANSPORT",
+      title: getVal(0, 0) || "Объявление о транспорте",
+      description: getTextarea(),
+      route: buildRoute(),
+      transport: {
+        transportType: getSelect(1, 0),
+        maxWeight: Number(getVal(1, 1)) || 0,
+        maxVolume: Number(getVal(1, 2)) || 0
+      }
+    };
+  }
+
+  function setButtonLoading(btn, loading, defaultText) {
+    if (!btn) return;
+    btn.disabled = loading;
+    btn.textContent = loading ? "Сохранение…" : defaultText;
+  }
+
+  // ============================================================
+  // СОЗДАНИЕ ГРУЗА
+  // ============================================================
+  function wireCreateCargo() {
+    console.log("wireCreateCargo init");
+
+    if (document.body.dataset.page !== "cargo") return;
+
+    // --- Кнопка «Опубликовать» ---
+    var publishBtn = document.getElementById("publishBtn");
+    if (publishBtn) {
+      publishBtn.addEventListener("click", async function () {
+        console.log("CLICK publish cargo");
+        var payload = buildCargoPayload();
+        console.log("PAYLOAD:", payload);
+
+        setButtonLoading(publishBtn, true, "Опубликовать объявление");
+        try {
+          var res = await API.listings.create(payload);
+          console.log("CREATED:", res);
+
+          // Отправляем на модерацию
+          if (res && res.id) {
+            await API.listings.sendToModeration(res.id);
+            console.log("SENT TO MODERATION:", res.id);
+          }
+
+          window.location.href = "cabinet.html";
+        } catch (e) {
+          console.error("CREATE/MODERATION ERROR:", e);
+          alert("Ошибка публикации объявления: " + (e.message || "неизвестная ошибка"));
+          setButtonLoading(publishBtn, false, "Опубликовать объявление");
+        }
+      });
+    }
+
+    // --- Кнопка «Сохранить черновик» ---
+    // Ищем ссылку с текстом «Сохранить черновик» в блоке .publish__actions
+    var draftLink = findDraftButton();
+    if (draftLink) {
+      // Превращаем ссылку в кнопку — перехватываем клик и останавливаем переход
+      draftLink.addEventListener("click", async function (e) {
+        e.preventDefault();
+        console.log("CLICK save draft cargo");
+
+        var payload = buildCargoPayload();
+        console.log("DRAFT PAYLOAD:", payload);
+
+        var origText = draftLink.textContent;
+        draftLink.textContent = "Сохранение…";
+        draftLink.style.pointerEvents = "none";
+
+        try {
+          var res = await API.listings.create(payload);
+          console.log("DRAFT CREATED:", res);
+          // Бэк создаёт листинг со статусом DRAFT — просто переходим в кабинет
+          window.location.href = "cabinet.html";
+        } catch (e) {
+          console.error("DRAFT ERROR:", e);
+          alert("Ошибка сохранения черновика: " + (e.message || "неизвестная ошибка"));
+          draftLink.textContent = origText;
+          draftLink.style.pointerEvents = "";
+        }
+      });
+    } else {
+      console.warn("Draft button not found on cargo page");
+    }
+  }
+
+  // ============================================================
+  // СОЗДАНИЕ ТРАНСПОРТА
+  // ============================================================
+  function wireCreateTransport() {
+    console.log("wireCreateTransport init");
+
+    if (document.body.dataset.page !== "transport") return;
+
+    // --- Кнопка «Опубликовать» ---
+    var publishBtn = document.getElementById("publishBtn");
+    if (publishBtn) {
+      publishBtn.addEventListener("click", async function () {
+        console.log("CLICK publish transport");
+        var payload = buildTransportPayload();
+        console.log("PAYLOAD:", payload);
+
+        setButtonLoading(publishBtn, true, "Опубликовать объявление");
+        try {
+          var res = await API.listings.create(payload);
+          console.log("CREATED:", res);
+
+          // Отправляем на модерацию
+          if (res && res.id) {
+            await API.listings.sendToModeration(res.id);
+            console.log("SENT TO MODERATION:", res.id);
+          }
+
+          window.location.href = "cabinet.html";
+        } catch (e) {
+          console.error("CREATE/MODERATION ERROR:", e);
+          alert("Ошибка публикации объявления: " + (e.message || "неизвестная ошибка"));
+          setButtonLoading(publishBtn, false, "Опубликовать объявление");
+        }
+      });
+    }
+
+    // --- Кнопка «Сохранить черновик» ---
+    var draftLink = findDraftButton();
+    if (draftLink) {
+      draftLink.addEventListener("click", async function (e) {
+        e.preventDefault();
+        console.log("CLICK save draft transport");
+
+        var payload = buildTransportPayload();
+        console.log("DRAFT PAYLOAD:", payload);
+
+        var origText = draftLink.textContent;
+        draftLink.textContent = "Сохранение…";
+        draftLink.style.pointerEvents = "none";
+
+        try {
+          var res = await API.listings.create(payload);
+          console.log("DRAFT CREATED:", res);
+          window.location.href = "cabinet.html";
+        } catch (e) {
+          console.error("DRAFT ERROR:", e);
+          alert("Ошибка сохранения черновика: " + (e.message || "неизвестная ошибка"));
+          draftLink.textContent = origText;
+          draftLink.style.pointerEvents = "";
+        }
+      });
+    } else {
+      console.warn("Draft button not found on transport page");
+    }
+  }
+
+  // Находит кнопку/ссылку «Сохранить черновик» в блоке publish__actions
+  function findDraftButton() {
+    // Сначала ищем в .publish__actions
+    var actions = document.querySelector(".publish__actions");
+    if (actions) {
+      var links = actions.querySelectorAll("a, button");
+      for (var i = 0; i < links.length; i++) {
+        if (links[i].textContent.trim().indexOf("Сохранить") !== -1) {
+          return links[i];
+        }
+      }
+    }
+    // Запасной вариант — ищем по всей странице
+    var allLinks = document.querySelectorAll("a[href='cabinet.html'], a[href='cabinet.html ']");
+    for (var j = 0; j < allLinks.length; j++) {
+      if (allLinks[j].textContent.trim().indexOf("Сохранить") !== -1) {
+        return allLinks[j];
+      }
+    }
+    return null;
   }
 
   // ============================================================
   // SETTINGS PAGE
   // ============================================================
   function wireSettings() {
-      if (document.body.dataset.page !== "settings") return;
+    if (document.body.dataset.page !== "settings") return;
 
-      if (!API.tokens.isAuthed) {
-        window.location.replace("auth.html");
+    if (!API.tokens.isAuthed) {
+      window.location.replace("auth.html");
+      return;
+    }
+
+    var form = document.querySelector(".settings-form");
+    if (!form) return;
+
+    var inputs = form.querySelectorAll("input");
+    var nameInput = inputs[0];
+    var emailInput = inputs[1];
+    var phoneInput = inputs[2];
+
+    API.users.me()
+      .then(function (user) {
+        var email = user.email;
+        var name = user.name || email.split("@")[0];
+        var phone = user.phone || "";
+
+        var nameEl = document.querySelector(".profile-card__name");
+        var emailEl = document.querySelector(".profile-card__email");
+        var avatar = document.querySelector(".avatar");
+
+        if (nameEl) nameEl.textContent = name;
+        if (emailEl) emailEl.textContent = email;
+        if (avatar) avatar.textContent = (name[0] || "U").toUpperCase();
+
+        if (emailInput) {
+          emailInput.value = email;
+          emailInput.readOnly = true;
+          emailInput.classList.add("input--readonly");
+        }
+
+        if (nameInput) {
+          nameInput.value = name;
+          if (!nameInput.value.trim()) nameInput.placeholder = "Введите имя";
+          nameInput.addEventListener("input", function () {
+            nameInput.placeholder = nameInput.value.trim() ? "" : "Введите имя";
+          });
+        }
+
+        if (phoneInput) {
+          phoneInput.value = phone;
+          if (!phoneInput.value.trim()) phoneInput.placeholder = "Введите телефон";
+          phoneInput.addEventListener("input", function () {
+            phoneInput.placeholder = phoneInput.value.trim() ? "" : "Введите телефон";
+          });
+        }
+      })
+      .catch(function (err) {
+        console.error(err);
+        alert("Не удалось загрузить данные пользователя");
+      });
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      var name = (nameInput.value || "").trim();
+      var phone = (phoneInput.value || "").trim();
+
+      if (!name) {
+        setFieldError(nameInput, "Введите имя");
         return;
       }
 
-      var form = document.querySelector(".settings-form");
-      if (!form) return;
+      setFieldError(nameInput, null);
 
-      var inputs = form.querySelectorAll("input");
-
-      var nameInput = inputs[0];
-      var emailInput = inputs[1];
-      var phoneInput = inputs[2];
-
-      API.users.me()
-        .then(function (user) {
-
-          var email = user.email;
-          var name = user.name || email.split("@")[0];
-          var phone = user.phone || "";
-
-          // -------- profile card --------
-
+      API.users.updateMe({ name: name, phone: phone || null })
+        .then(function (updatedUser) {
+          var actualName = updatedUser.name || updatedUser.email.split("@")[0];
           var nameEl = document.querySelector(".profile-card__name");
-          var emailEl = document.querySelector(".profile-card__email");
           var avatar = document.querySelector(".avatar");
-
-          if (nameEl) nameEl.textContent = name;
-          if (emailEl) emailEl.textContent = email;
-          if (avatar) avatar.textContent = (name[0] || "U").toUpperCase();
-
-          // -------- email --------
-
-          if (emailInput) {
-            emailInput.value = email;
-            emailInput.readOnly = true;
-            emailInput.classList.add("input--readonly");
-          }
-
-          // -------- name --------
-
-          if (nameInput) {
-            nameInput.value = name;
-
-            if (!nameInput.value.trim()) {
-              nameInput.placeholder = "Введите имя";
-            }
-
-            nameInput.addEventListener("input", function () {
-              if (!nameInput.value.trim()) {
-                nameInput.placeholder = "Введите имя";
-              } else {
-                nameInput.placeholder = "";
-              }
-            });
-          }
-
-          // -------- phone --------
-
-          if (phoneInput) {
-            phoneInput.value = phone;
-
-            if (!phoneInput.value.trim()) {
-              phoneInput.placeholder = "Введите телефон";
-            }
-
-            phoneInput.addEventListener("input", function () {
-              if (!phoneInput.value.trim()) {
-                phoneInput.placeholder = "Введите телефон";
-              } else {
-                phoneInput.placeholder = "";
-              }
-            });
-          }
+          if (nameEl) nameEl.textContent = actualName;
+          if (avatar) avatar.textContent = (actualName[0] || "U").toUpperCase();
+          alert("Данные успешно сохранены");
         })
         .catch(function (err) {
           console.error(err);
-          alert("Не удалось загрузить данные пользователя");
+          alert("Не удалось сохранить изменения");
         });
-
-      // -------- submit --------
-
-      form.addEventListener("submit", function (e) {
-        e.preventDefault();
-
-        var name = (nameInput.value || "").trim();
-        var phone = (phoneInput.value || "").trim();
-
-        if (!name) {
-          setFieldError(nameInput, "Введите имя");
-          return;
-        }
-
-        setFieldError(nameInput, null);
-
-        API.users.updateMe({
-          name: name,
-          phone: phone || null
-        })
-          .then(function (updatedUser) {
-
-            var actualName =
-              updatedUser.name ||
-              updatedUser.email.split("@")[0];
-
-            // profile-card
-
-            var nameEl = document.querySelector(".profile-card__name");
-            var avatar = document.querySelector(".avatar");
-
-            if (nameEl) {
-              nameEl.textContent = actualName;
-            }
-
-            if (avatar) {
-              avatar.textContent =
-                (actualName[0] || "U").toUpperCase();
-            }
-
-            alert("Данные успешно сохранены");
-          })
-          .catch(function (err) {
-            console.error(err);
-            alert("Не удалось сохранить изменения");
-          });
-      });
-    }
-
-    function setNamePlaceholder(input) {
-      if (!input) return;
-
-      if (!input.value.trim()) {
-        input.classList.add("input--placeholder");
-        input.placeholder = "Введите имя";
-      } else {
-        input.classList.remove("input--placeholder");
-        input.placeholder = "";
-      }
-    }
-
-    function setPhonePlaceholder(input) {
-      if (!input) return;
-
-      if (!input.value.trim()) {
-        input.classList.add("input--placeholder");
-        input.placeholder = "Введите телефон";
-      } else {
-        input.classList.remove("input--placeholder");
-        input.placeholder = "";
-      }
-    }
+    });
+  }
 
   // ============================================================
-  // EDIT TRANSPORT (FIXED)
+  // EDIT TRANSPORT
   // ============================================================
   function wireEditTransport() {
-
     console.log("wireEditTransport started");
-    
+
     if (document.body.dataset.page !== "edit-transport") return;
 
     if (!API.tokens.isAuthed) {
@@ -713,7 +744,7 @@
 
     function setField(key, value) {
       var el = form.querySelector('[data-field="' + key + '"]');
-      if (el) el.value = value ?? "";
+      if (el) el.value = value != null ? value : "";
     }
 
     function getField(key) {
@@ -721,9 +752,6 @@
       return el ? el.value : "";
     }
 
-    // ============================================================
-    // LOAD DATA (IMPORTANT FIX: auth true)
-    // ============================================================
     API.listings.get(id, { auth: true })
       .then(function (data) {
         if (!data) return;
@@ -731,19 +759,18 @@
         setField("title", data.title);
         setField("description", data.description);
 
-        setField("route.origin.country", data.route?.origin?.country);
-        setField("route.origin.city", data.route?.origin?.city);
+        setField("route.origin.country", data.route && data.route.origin && data.route.origin.country);
+        setField("route.origin.city", data.route && data.route.origin && data.route.origin.city);
 
-        setField("route.destination.country", data.route?.destination?.country);
-        setField("route.destination.city", data.route?.destination?.city);
+        setField("route.destination.country", data.route && data.route.destination && data.route.destination.country);
+        setField("route.destination.city", data.route && data.route.destination && data.route.destination.city);
 
-        setField("transport.transportType", data.transport?.transportType);
-        setField("transport.maxWeight", data.transport?.maxWeight);
-        setField("transport.maxVolume", data.transport?.maxVolume);
+        setField("transport.transportType", data.transport && data.transport.transportType);
+        setField("transport.maxWeight", data.transport && data.transport.maxWeight);
+        setField("transport.maxVolume", data.transport && data.transport.maxVolume);
       })
       .catch(function (err) {
         console.error(err);
-
         if (err.status === 403 || err.status === 401) {
           alert("Нет доступа к объявлению");
           window.location.replace("cabinet.html");
@@ -752,9 +779,6 @@
         }
       });
 
-    // ============================================================
-    // SAVE DATA
-    // ============================================================
     form.addEventListener("submit", function (e) {
       e.preventDefault();
 
@@ -762,7 +786,6 @@
         type: "TRANSPORT",
         title: getField("title"),
         description: getField("description"),
-
         route: {
           origin: {
             country: getField("route.origin.country"),
@@ -774,7 +797,6 @@
           },
           waypoints: []
         },
-
         transport: {
           transportType: getField("transport.transportType"),
           maxWeight: Number(getField("transport.maxWeight")),
@@ -798,26 +820,21 @@
     });
   }
 
-    // ============================================================
-    // ПЕРЕКЛЮЧЕНИЕ ГРУЗ <-> ТРАНСПОРТ
-    // ============================================================
-    function wireListingTypeSelector() {
-      var wrapper = document.querySelector("[data-type-select]");
-      if (!wrapper) return;
+  // ============================================================
+  // ПЕРЕКЛЮЧЕНИЕ ГРУЗ <-> ТРАНСПОРТ
+  // ============================================================
+  function wireListingTypeSelector() {
+    var wrapper = document.querySelector("[data-type-select]");
+    if (!wrapper) return;
 
-      var select = wrapper.querySelector("select");
-      if (!select) return;
+    var select = wrapper.querySelector("select");
+    if (!select) return;
 
-      select.addEventListener("change", function () {
-        var value = (select.value || "").trim().toLowerCase();
+    select.addEventListener("change", function () {
+      var value = (select.value || "").trim().toLowerCase();
+      if (value === "транспорт") window.location.href = "create-transport.html";
+      if (value === "груз") window.location.href = "create-cargo.html";
+    });
+  }
 
-        if (value === "транспорт") {
-          window.location.href = "create-transport.html";
-        }
-
-        if (value === "груз") {
-          window.location.href = "create-cargo.html";
-        }
-      });
-    }
 })();
