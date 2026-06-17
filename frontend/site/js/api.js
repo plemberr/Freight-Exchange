@@ -164,7 +164,7 @@ window.FreightAPI = (function () {
     // AUTH (по твоему контракту)
     // -------------------------
     auth: {
-      registry: (email, password) =>
+      register: (email, password) =>
         request("/auth/register", {
           method: "POST",
           body: { email, password }

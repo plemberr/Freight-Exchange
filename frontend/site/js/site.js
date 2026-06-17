@@ -127,6 +127,8 @@
         }
         var pass = form.querySelector('input[type="password"]');
         if (pass) {
+          var pv = pass.value.length >= 8;
+          toggleError(pass, !pv, "Пароль должен содержать минимум 8 символов");
           ok = ok && pv;
         }
         if (ok) {
