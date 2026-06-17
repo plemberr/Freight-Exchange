@@ -165,7 +165,7 @@ window.FreightAPI = (function () {
     // -------------------------
     auth: {
       registry: (email, password) =>
-        request("/auth/registry", {
+        request("/auth/register", {
           method: "POST",
           body: { email, password }
         }).then(auth => {
