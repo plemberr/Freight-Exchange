@@ -161,7 +161,7 @@ window.FreightAPI = (function () {
     ApiError,
 
     // -------------------------
-    // AUTH (по твоему контракту)
+    // AUTH
     // -------------------------
     auth: {
       register: (email, password) =>
@@ -290,16 +290,22 @@ window.FreightAPI = (function () {
     // ROUTES
     // -------------------------
     routes: {
-      geocode: (city) =>
+      // GET /api/v1/routes/geocode?query=<address>
+      // Возвращает массив LocationResult: [{displayName, city, country, latitude, longitude}]
+      geocode: (query) =>
         request("/routes/geocode", {
-          query: { city }
+          query: { query }   // ← параметр называется "query", не "city"
         }),
 
+      // GET /api/v1/routes/reverse-geocode?latitude=&longitude=
       reverseGeocode: (lat, lon) =>
         request("/routes/reverse-geocode", {
           query: { latitude: lat, longitude: lon }
         }),
 
+      // POST /api/v1/routes/calculate
+      // Body: { origin: Point, destination: Point, waypoints: Point[] }
+      // Point: { latitude, longitude, city?, country? }
       calculate: (payload) =>
         request("/routes/calculate", {
           method: "POST",
