@@ -15,22 +15,28 @@
 <body data-page="edit-transport" data-login="solid">
 
 <header class="header">
-  <div class="container header__inner">
-    <a href="index.html" class="logo">Freight<b>Hub</b></a>
-
-    <nav class="nav" data-nav-menu>
-      <a href="index.html" class="nav__link" data-nav-key="home">Главная</a>
-      <a href="search-cargo.html" class="nav__link" data-nav-key="cargo">Найти груз</a>
-      <a href="search-transport.html" class="nav__link" data-nav-key="transport">Найти транспорт</a>
-      <a href="about.html" class="nav__link" data-nav-key="about">О сервисе</a>
-      <a href="moderator.html" class="nav__link" data-nav-key="moderation" data-mod-link hidden>Модерация</a>
-    </nav>
-
-    <div class="header__actions">
-      <a href="auth.html" class="btn btn--primary" data-login-btn>Войти</a>
-      <button class="burger" data-burger></button>
+  <header class="header">
+    <div class="container header__inner">
+      <a href="index.html" class="logo">Freight<b>Hub</b></a>
+      <nav class="nav" data-nav-menu aria-label="Основная навигация">
+        <a href="index.html" class="nav__link" data-nav-key="home">Главная</a>
+        <a href="search-cargo.html" class="nav__link" data-nav-key="cargo">Найти груз</a>
+        <a href="search-transport.html" class="nav__link" data-nav-key="transport">Найти транспорт</a>
+        <a href="about.html" class="nav__link" data-nav-key="about">О сервисе</a>
+        <a href="index.html#contacts" class="nav__link" data-nav-key="contacts">Контакты</a>
+        <a href="moderator.html" class="nav__link" data-nav-key="moderation" data-mod-link hidden>Модерация</a>
+      </nav>
+      <div class="header__actions">
+        <button class="lang" type="button">RU
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <a href="auth.html" class="btn btn--primary" data-login-btn>Войти
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
+        </a>
+        <button class="burger" data-burger type="button" aria-label="Меню" aria-expanded="false"><span></span><span></span><span></span></button>
+      </div>
     </div>
-  </div>
+  </header>
 </header>
 
 <main class="container wizard">

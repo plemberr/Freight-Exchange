@@ -28,6 +28,28 @@ from app.clients.cargo_client import CargoClient
 from app.clients.route_client import RouteClient
 
 
+def _apply_partial_update(target, source_model) -> None:
+    """
+    Copies the fields that were actually set on a partial-update Pydantic
+    schema (e.g. TransportRequest/CargoRequest used inside
+    UpdateListingRequest) onto an ORM object.
+
+    Pydantic field names are camelCase (transportType, maxWeight...) while
+    the ORM/DB attributes are snake_case (transport_type, max_weight...).
+    Each field's validation_alias already holds the correct snake_case
+    name (see app/schemas/transport.py and app/schemas/cargo.py), so we
+    reuse it here instead of hand-mapping individual fields again -
+    hand-mapping is exactly what caused maxWeight/maxVolume to silently
+    not persist before, since only transportType/cargoType were mapped.
+    """
+    fields = type(source_model).model_fields
+
+    for field_name, value in source_model.model_dump(exclude_unset=True).items():
+        alias = fields[field_name].validation_alias
+        attr_name = alias if isinstance(alias, str) else field_name
+        setattr(target, attr_name, value)
+
+
 class ListingService:
 
     def __init__(self):
@@ -252,8 +274,7 @@ class ListingService:
             if not listing.cargo:
                 listing.cargo = Cargo()
 
-            for k, v in data.cargo.model_dump(exclude_unset=True).items():
-                setattr(listing.cargo, "cargo_type" if k == "cargoType" else k, v)
+            _apply_partial_update(listing.cargo, data.cargo)
 
             if all([
                 listing.cargo.length,
@@ -273,12 +294,7 @@ class ListingService:
             if not listing.transport:
                 listing.transport = Transport()
 
-            for k, v in data.transport.model_dump(exclude_unset=True).items():
-                setattr(
-                    listing.transport,
-                    "transport_type" if k == "transportType" else k,
-                    v
-                )
+            _apply_partial_update(listing.transport, data.transport)
 
         # -------------------------
         # MODERATION
