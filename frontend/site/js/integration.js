@@ -16,12 +16,12 @@
     wireModerationQueue(); // moderator.html — очередь
     wireLogout();
     wireLoginButton();
+    wireWizardMap();       // карта + геокодинг на страницах создания объявления
     wireCreateCargo();
     wireCreateTransport();
     wireSettings();
     wireEditTransport();
     wireListingTypeSelector();
-    wireEditCargo();
   });
   // ещё раз после полной загрузки — перебить возможный показ ссылки из site.js
   window.addEventListener("load", wireModeratorLink);
@@ -447,52 +447,336 @@
     return ta ? (ta.value || "").trim() : "";
   }
 
-  // Геокодинг через API бэка — возвращает Promise<{latitude, longitude}>
-  // Если бэк недоступен или вернул ошибку — возвращает null
-  async function geocodeCity(city) {
-    if (!city || !city.trim()) return null;
+  // ============================================================
+  // КАРТА И ГЕОКОДИНГ
+  // ============================================================
+
+  // Состояние карты — хранит текущие координаты и объекты Leaflet
+  var mapState = {
+    map: null,
+    originMarker: null,
+    destMarker: null,
+    routeLayer: null,
+    origin: null,     // { latitude, longitude, city, country }
+    destination: null // { latitude, longitude, city, country }
+  };
+
+  // Иконки для маркеров
+  function makeIcon(color) {
+    return window.L && L.divIcon({
+      className: "",
+      html: '<div style="width:14px;height:14px;border-radius:50%;background:' + color + ';border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>',
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+  }
+
+  // Инициализирует карту Leaflet внутри .map-box__area
+  function initMap() {
+    if (!window.L) return;
+    var container = document.querySelector(".map-box__area");
+    if (!container) return;
+
+    // Убираем заглушку, ставим нормальный контейнер
+    container.innerHTML = '<div id="wizard-map" style="width:100%;height:100%;border-radius:inherit"></div>';
+
+    mapState.map = L.map("wizard-map", { zoomControl: true }).setView([51.0, 10.0], 5);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 18
+    }).addTo(mapState.map);
+  }
+
+  // Обновляет маркер на карте
+  function setMarker(role, lat, lon, label) {
+    if (!mapState.map) return;
+    var color = role === "origin" ? "#2563eb" : "#dc2626";
+    var icon = makeIcon(color);
+
+    if (role === "origin") {
+      if (mapState.originMarker) mapState.originMarker.remove();
+      mapState.originMarker = L.marker([lat, lon], { icon: icon })
+        .addTo(mapState.map)
+        .bindPopup(label || "Отправление");
+    } else {
+      if (mapState.destMarker) mapState.destMarker.remove();
+      mapState.destMarker = L.marker([lat, lon], { icon: icon })
+        .addTo(mapState.map)
+        .bindPopup(label || "Назначение");
+    }
+  }
+
+  // Подгоняет карту под видимые маркеры
+  function fitMapBounds() {
+    if (!mapState.map) return;
+    var points = [];
+    if (mapState.origin)      points.push([mapState.origin.latitude,      mapState.origin.longitude]);
+    if (mapState.destination) points.push([mapState.destination.latitude, mapState.destination.longitude]);
+    if (points.length === 1)  mapState.map.setView(points[0], 10);
+    if (points.length === 2)  mapState.map.fitBounds(points, { padding: [40, 40] });
+  }
+
+  // Рисует маршрут по polyline из /routes/calculate
+  // ORS возвращает encoded polyline (строка), декодируем через L.Polyline.fromEncoded если доступен,
+  // иначе через нашу встроенную функцию
+  function drawRoute(polyline) {
+    if (!mapState.map || !polyline) return;
+    if (mapState.routeLayer) { mapState.routeLayer.remove(); mapState.routeLayer = null; }
+
+    var latlngs = decodePolyline(polyline);
+    if (!latlngs || !latlngs.length) return;
+
+    mapState.routeLayer = L.polyline(latlngs, {
+      color: "#2563eb",
+      weight: 4,
+      opacity: 0.75,
+      lineJoin: "round"
+    }).addTo(mapState.map);
+
+    mapState.map.fitBounds(mapState.routeLayer.getBounds(), { padding: [40, 40] });
+  }
+
+  // Стандартный Google/ORS encoded polyline decoder
+  function decodePolyline(encoded) {
+    var result = [];
+    var index = 0, lat = 0, lng = 0;
+    while (index < encoded.length) {
+      var b, shift = 0, result2 = 0;
+      do { b = encoded.charCodeAt(index++) - 63; result2 |= (b & 0x1f) << shift; shift += 5; } while (b >= 32);
+      var dlat = (result2 & 1) ? ~(result2 >> 1) : (result2 >> 1); lat += dlat;
+      shift = 0; result2 = 0;
+      do { b = encoded.charCodeAt(index++) - 63; result2 |= (b & 0x1f) << shift; shift += 5; } while (b >= 32);
+      var dlng = (result2 & 1) ? ~(result2 >> 1) : (result2 >> 1); lng += dlng;
+      result.push([lat / 1e5, lng / 1e5]);
+    }
+    return result;
+  }
+
+  // Запрашивает маршрут у бэка и рисует его на карте
+  async function updateMapRoute() {
+    if (!mapState.origin || !mapState.destination) return;
     try {
-      var result = await API.routes.geocode(city.trim());
-      // Бэк отдаёт { latitude, longitude } или { lat, lon } — поддерживаем оба варианта
-      var lat = result.latitude != null ? result.latitude : result.lat;
-      var lon = result.longitude != null ? result.longitude : (result.lon != null ? result.lon : result.lng);
-      if (lat != null && lon != null) return { latitude: Number(lat), longitude: Number(lon) };
+      var routeData = await API.routes.calculate({
+        origin:      { latitude: mapState.origin.latitude,      longitude: mapState.origin.longitude },
+        destination: { latitude: mapState.destination.latitude, longitude: mapState.destination.longitude },
+        waypoints:   []
+      });
+
+      if (routeData && routeData.polyline) {
+        drawRoute(routeData.polyline);
+
+        // Показываем расстояние и время в шапке карты
+        var head = document.querySelector(".map-box__head");
+        if (head && routeData.distanceKm) {
+          var km = Math.round(routeData.distanceKm);
+          var hrs = routeData.estimatedDurationMinutes ? Math.round(routeData.estimatedDurationMinutes / 60) : null;
+          head.textContent = "Маршрут на карте — " + km + " км" + (hrs ? " (~" + hrs + " ч)" : "");
+        }
+      }
     } catch (e) {
-      console.warn("Geocode failed for city:", city, e);
+      console.warn("Route calculate failed:", e);
+    }
+  }
+
+  // Геокодирует адресную строку → возвращает первый результат или null
+  // Принимает полную строку: «Берлин, Германия» или «ул. Мясницкая 20, Москва»
+  async function geocodeAddress(query) {
+    if (!query || !query.trim()) return null;
+    try {
+      // /api/v1/routes/geocode?query=... возвращает массив LocationResult
+      var results = await API.routes.geocode(query.trim());
+      if (Array.isArray(results) && results.length > 0) {
+        var r = results[0];
+        return {
+          latitude:  Number(r.latitude),
+          longitude: Number(r.longitude),
+          city:      r.city    || null,
+          country:   r.country || null,
+          displayName: r.displayName || query
+        };
+      }
+    } catch (e) {
+      console.warn("Geocode failed:", query, e);
     }
     return null;
   }
 
-  // Собирает route: геокодирует origin и destination параллельно
+  // Показывает autocomplete-подсказки под input-ом
+  function showSuggestions(input, results, onSelect) {
+    // Удаляем старый список
+    var old = input.parentNode.querySelector(".geocode-suggestions");
+    if (old) old.remove();
+    if (!results || !results.length) return;
+
+    var list = document.createElement("ul");
+    list.className = "geocode-suggestions";
+    list.style.cssText = "position:absolute;z-index:9999;background:#fff;border:1px solid var(--border,#e2e8f0);border-radius:8px;padding:4px 0;list-style:none;margin:0;width:100%;max-height:180px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.12);top:calc(100% + 4px);left:0";
+
+    results.slice(0, 5).forEach(function (r) {
+      var li = document.createElement("li");
+      li.textContent = r.displayName || (r.city ? r.city + ", " + r.country : "");
+      li.style.cssText = "padding:8px 14px;cursor:pointer;font-size:14px;color:var(--text,#1e293b)";
+      li.addEventListener("mouseenter", function () { li.style.background = "#f1f5f9"; });
+      li.addEventListener("mouseleave", function () { li.style.background = ""; });
+      li.addEventListener("mousedown", function (e) {
+        e.preventDefault(); // не даём blur сработать раньше
+        onSelect(r, li.textContent);
+        list.remove();
+      });
+      list.appendChild(li);
+    });
+
+    // Позиционируем относительно input-icon обёртки
+    var wrap = input.closest(".input-icon") || input.parentNode;
+    wrap.style.position = "relative";
+    wrap.appendChild(list);
+
+    // Закрываем при blur
+    function onBlur() {
+      setTimeout(function () { if (list.parentNode) list.remove(); }, 150);
+      input.removeEventListener("blur", onBlur);
+    }
+    input.addEventListener("blur", onBlur);
+  }
+
+  // Подвешивает geocode-автодополнение на один input
+  // role: "origin" или "destination"
+  // onResolved(coords) — колбэк когда координаты определены
+  function attachGeocodeInput(input, role, onResolved) {
+    if (!input) return;
+    var debounceTimer = null;
+
+    input.addEventListener("input", function () {
+      clearTimeout(debounceTimer);
+      var q = input.value.trim();
+      if (q.length < 2) return;
+
+      debounceTimer = setTimeout(async function () {
+        try {
+          var results = await API.routes.geocode(q);
+          if (!Array.isArray(results) || !results.length) return;
+          showSuggestions(input, results, function (r, label) {
+            input.value = label;
+            onResolved({
+              latitude:    Number(r.latitude),
+              longitude:   Number(r.longitude),
+              city:        r.city    || null,
+              country:     r.country || null,
+              displayName: r.displayName || label
+            });
+          });
+        } catch (e) { /* тихо игнорируем */ }
+      }, 350);
+    });
+  }
+
+  // Главная функция — инициализирует карту и вешает геокодинг на поля шага 1
+  function wireWizardMap() {
+    // Только на страницах создания объявления
+    var page = document.body.dataset.page;
+    if (page !== "cargo" && page !== "transport") return;
+
+    // Загружаем Leaflet CSS и JS, потом инициализируем
+    if (!window.L) {
+      var cssLink = document.createElement("link");
+      cssLink.rel = "stylesheet";
+      cssLink.href = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css";
+      document.head.appendChild(cssLink);
+
+      var script = document.createElement("script");
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js";
+      script.onload = function () { setupMapAndGeocoding(); };
+      document.head.appendChild(script);
+    } else {
+      setupMapAndGeocoding();
+    }
+  }
+
+  function setupMapAndGeocoding() {
+    initMap();
+
+    // Поля шага 1 в порядке: страна_откуда, город_откуда, адрес_погрузки, страна_куда, город_куда, адрес_разгрузки
+    var step0 = document.querySelectorAll("[data-wizard-step]")[0];
+    if (!step0) return;
+
+    var allInputs = step0.querySelectorAll("input");
+    // [0] страна откуда, [1] город откуда, [2] адрес погрузки
+    // [3] страна куда,   [4] город куда,   [5] адрес разгрузки
+
+    // Когда выбран пункт отправления — ставим маркер и обновляем маршрут
+    function onOriginResolved(coords) {
+      mapState.origin = coords;
+      setMarker("origin", coords.latitude, coords.longitude, coords.displayName);
+      fitMapBounds();
+      updateMapRoute();
+    }
+
+    // Когда выбран пункт назначения
+    function onDestResolved(coords) {
+      mapState.destination = coords;
+      setMarker("dest", coords.latitude, coords.longitude, coords.displayName);
+      fitMapBounds();
+      updateMapRoute();
+    }
+
+    // Вешаем автодополнение:
+    // Приоритет точности: если заполнен «точный адрес» — геокодируем его,
+    // если нет — геокодируем «город + страна»
+    // Для простоты: автодополнение на поле «город» и поле «точный адрес»
+
+    // Поле города отправления
+    attachGeocodeInput(allInputs[1], "origin", function (coords) {
+      // Если страна не заполнена — подставляем из результата
+      if (allInputs[0] && !allInputs[0].value && coords.country) allInputs[0].value = coords.country;
+      onOriginResolved(coords);
+    });
+
+    // Поле точного адреса погрузки — более точный геокодинг, перезаписывает координаты
+    attachGeocodeInput(allInputs[2], "origin", onOriginResolved);
+
+    // Поле города назначения
+    attachGeocodeInput(allInputs[4], "destination", function (coords) {
+      if (allInputs[3] && !allInputs[3].value && coords.country) allInputs[3].value = coords.country;
+      onDestResolved(coords);
+    });
+
+    // Поле точного адреса разгрузки
+    attachGeocodeInput(allInputs[5], "destination", onDestResolved);
+  }
+
+  // Собирает route из mapState (координаты уже есть) + читает текстовые поля
   async function buildRoute() {
-    var inputs = document.querySelectorAll(".wizard-step input");
+    var step0 = document.querySelectorAll("[data-wizard-step]")[0];
+    var inputs = step0 ? step0.querySelectorAll("input") : [];
 
-    var originCountry  = (inputs[0] && inputs[0].value) || "";
-    var originCity     = (inputs[1] && inputs[1].value) || "";
-    var destCountry    = (inputs[3] && inputs[3].value) || "";
-    var destCity       = (inputs[4] && inputs[4].value) || "";
+    var originCountry = (inputs[0] && inputs[0].value) || (mapState.origin && mapState.origin.country) || "";
+    var originCity    = (inputs[1] && inputs[1].value) || (mapState.origin && mapState.origin.city)    || "";
+    var destCountry   = (inputs[3] && inputs[3].value) || (mapState.destination && mapState.destination.country) || "";
+    var destCity      = (inputs[4] && inputs[4].value) || (mapState.destination && mapState.destination.city)    || "";
 
-    // Геокодируем параллельно
-    var coords = await Promise.all([
-      geocodeCity(originCity || originCountry),
-      geocodeCity(destCity || destCountry)
-    ]);
-
-    var originCoords = coords[0] || { latitude: 0, longitude: 0 };
-    var destCoords   = coords[1] || { latitude: 0, longitude: 0 };
+    // Если координаты ещё не получены через autocomplete — геокодируем прямо сейчас
+    if (!mapState.origin || !mapState.origin.latitude) {
+      var query = [inputs[2] && inputs[2].value, originCity, originCountry].filter(Boolean).join(", ");
+      mapState.origin = await geocodeAddress(query) || { latitude: 0, longitude: 0, city: originCity, country: originCountry };
+    }
+    if (!mapState.destination || !mapState.destination.latitude) {
+      var query2 = [inputs[5] && inputs[5].value, destCity, destCountry].filter(Boolean).join(", ");
+      mapState.destination = await geocodeAddress(query2) || { latitude: 0, longitude: 0, city: destCity, country: destCountry };
+    }
 
     return {
       origin: {
         country:   originCountry,
         city:      originCity,
-        latitude:  originCoords.latitude,
-        longitude: originCoords.longitude
+        latitude:  mapState.origin.latitude,
+        longitude: mapState.origin.longitude
       },
       destination: {
         country:   destCountry,
         city:      destCity,
-        latitude:  destCoords.latitude,
-        longitude: destCoords.longitude
+        latitude:  mapState.destination.latitude,
+        longitude: mapState.destination.longitude
       },
       waypoints: []
     };
@@ -506,11 +790,12 @@
   }
 
   async function buildCargoPayload() {
-    var inputs = document.querySelectorAll(".wizard-step input");
-    var originCity    = (inputs[1] && inputs[1].value) || "";
-    var originCountry = (inputs[0] && inputs[0].value) || "";
-    var destCity      = (inputs[4] && inputs[4].value) || "";
-    var destCountry   = (inputs[3] && inputs[3].value) || "";
+    var step0 = document.querySelectorAll("[data-wizard-step]")[0];
+    var inputs0 = step0 ? step0.querySelectorAll("input") : [];
+    var originCity    = (inputs0[1] && inputs0[1].value) || "";
+    var originCountry = (inputs0[0] && inputs0[0].value) || "";
+    var destCity      = (inputs0[4] && inputs0[4].value) || "";
+    var destCountry   = (inputs0[3] && inputs0[3].value) || "";
 
     var route = await buildRoute();
 
@@ -532,11 +817,12 @@
   }
 
   async function buildTransportPayload() {
-    var inputs = document.querySelectorAll(".wizard-step input");
-    var originCity    = (inputs[1] && inputs[1].value) || "";
-    var originCountry = (inputs[0] && inputs[0].value) || "";
-    var destCity      = (inputs[4] && inputs[4].value) || "";
-    var destCountry   = (inputs[3] && inputs[3].value) || "";
+    var step0 = document.querySelectorAll("[data-wizard-step]")[0];
+    var inputs0 = step0 ? step0.querySelectorAll("input") : [];
+    var originCity    = (inputs0[1] && inputs0[1].value) || "";
+    var originCountry = (inputs0[0] && inputs0[0].value) || "";
+    var destCity      = (inputs0[4] && inputs0[4].value) || "";
+    var destCountry   = (inputs0[3] && inputs0[3].value) || "";
 
     var route = await buildRoute();
 
@@ -907,131 +1193,6 @@
   }
 
   // ============================================================
-  // EDIT CARGO
-  // ============================================================
-  function wireEditCargo() {
-
-    console.log("wireEditCargo started");
-
-    if (document.body.dataset.page !== "edit-cargo") return;
-
-    if (!API.tokens.isAuthed) {
-      window.location.replace("auth.html");
-      return;
-    }
-
-    var id = new URLSearchParams(location.search).get("id");
-    if (!id) return;
-
-    var form = document.querySelector("form");
-    if (!form) return;
-
-    var btn = form.querySelector("button[type='submit']");
-
-    function setField(key, value) {
-      var el = form.querySelector('[data-field="' + key + '"]');
-      if (el) el.value = value ?? "";
-    }
-
-    function getField(key) {
-      var el = form.querySelector('[data-field="' + key + '"]');
-      return el ? el.value : "";
-    }
-
-    // =========================
-    // LOAD
-    // =========================
-    API.listings.get(id)
-      .then(function (data) {
-        if (!data) return;
-
-        // base
-        setField("description", data.description);
-        setField("title", data.title);
-
-        // route
-        setField("route.origin.country", data.route?.origin?.country);
-        setField("route.origin.city", data.route?.origin?.city);
-        setField("route.origin.address", data.route?.origin?.address || "");
-
-        setField("route.destination.country", data.route?.destination?.country);
-        setField("route.destination.city", data.route?.destination?.city);
-        setField("route.destination.address", data.route?.destination?.address || "");
-
-        // cargo
-        setField("cargo.cargoType", data.cargo?.cargoType);
-        setField("cargo.length", data.cargo?.length);
-        setField("cargo.width", data.cargo?.width);
-        setField("cargo.height", data.cargo?.height);
-        setField("cargo.weight", data.cargo?.weight);
-        setField("cargo.volume", data.cargo?.volume);
-        setField("cargo.price", data.cargo?.price);
-      })
-      .catch(function (err) {
-        console.error(err);
-
-        if (err.status === 401 || err.status === 403) {
-          alert("Нет доступа к объявлению");
-          window.location.replace("cabinet.html");
-        } else {
-          alert("Ошибка загрузки объявления");
-        }
-      });
-
-    // =========================
-    // SAVE
-    // =========================
-    form.addEventListener("submit", function (e) {
-      e.preventDefault();
-
-      var payload = {
-        type: "CARGO",
-
-        title: getField("title"),
-        description: getField("description"),
-
-        route: {
-          origin: {
-            country: getField("route.origin.country"),
-            city: getField("route.origin.city"),
-            address: getField("route.origin.address")
-          },
-          destination: {
-            country: getField("route.destination.country"),
-            city: getField("route.destination.city"),
-            address: getField("route.destination.address")
-          },
-          waypoints: []
-        },
-
-        cargo: {
-          cargoType: getField("cargo.cargoType"),
-          length: Number(getField("cargo.length")),
-          width: Number(getField("cargo.width")),
-          height: Number(getField("cargo.height")),
-          weight: Number(getField("cargo.weight")),
-          volume: Number(getField("cargo.volume")),
-          price: Number(getField("cargo.price"))
-        }
-      };
-
-      btn.disabled = true;
-
-      API.listings.update(id, payload)
-        .then(function () {
-          window.location.href = "cabinet.html";
-        })
-        .catch(function (err) {
-          console.error(err);
-          alert("Ошибка сохранения");
-        })
-        .finally(function () {
-          btn.disabled = false;
-        });
-    });
-  }
-
-  // ============================================================
   // ПЕРЕКЛЮЧЕНИЕ ГРУЗ <-> ТРАНСПОРТ
   // ============================================================
   function wireListingTypeSelector() {
@@ -1047,5 +1208,4 @@
       if (value === "груз") window.location.href = "create-cargo.html";
     });
   }
-
 })();
