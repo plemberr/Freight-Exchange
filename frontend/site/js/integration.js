@@ -497,57 +497,104 @@
   }
 
   // ============================================================
-  // SETTINGS — профиль пользователя
+  // SETTINGS PAGE
   // ============================================================
   function wireSettings() {
-      var form = document.querySelector(".settings-form");
-      if (!form) return;
+    if (document.body.dataset.page !== "settings") return;
 
-      if (!API.tokens.isAuthed) {
-        window.location.replace("auth.html");
+    if (!API.tokens.isAuthed) {
+      window.location.replace("auth.html");
+      return;
+    }
+
+    var email = API.tokens.email();
+    if (!email) return;
+
+    var nickFromEmail = email.split("@")[0];
+
+    // -------- profile card --------
+    var nameEl = document.querySelector(".profile-card__name");
+    var emailEl = document.querySelector(".profile-card__email");
+    var avatar = document.querySelector(".avatar");
+
+    if (nameEl) nameEl.textContent = nickFromEmail;
+    if (emailEl) emailEl.textContent = email;
+    if (avatar) avatar.textContent = (nickFromEmail[0] || "U").toUpperCase();
+
+    // -------- form fields --------
+    var form = document.querySelector(".settings-form");
+    if (!form) return;
+
+    var nameInput = form.querySelector('input[name="name"]');
+    var emailInput = form.querySelector('input[type="email"]');
+    var phoneInput = form.querySelector('input[name="phone"]');
+
+    // если у тебя нет name attributes — fallback по порядку
+    var inputs = form.querySelectorAll("input");
+    nameInput = nameInput || inputs[0];
+    emailInput = emailInput || inputs[1];
+    phoneInput = phoneInput || inputs[2];
+
+    // email фиксируем
+    if (emailInput) {
+      emailInput.value = email;
+      emailInput.readOnly = true;
+      emailInput.classList.add("input--readonly");
+    }
+
+    // имя = часть email
+    if (nameInput) {
+      nameInput.value = nickFromEmail;
+      nameInput.dataset.placeholder = "Введите имя";
+
+      setNamePlaceholder(nameInput);
+
+      nameInput.addEventListener("input", function () {
+        setNamePlaceholder(nameInput);
+      });
+    }
+
+    // телефон пустой
+    if (phoneInput) {
+      phoneInput.value = "";
+      phoneInput.dataset.placeholder = "Введите телефон";
+      setPhonePlaceholder(phoneInput);
+    }
+
+    // -------- submit --------
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      var nameVal = (nameInput && nameInput.value || "").trim();
+
+      if (!nameVal) {
+        setFieldError(nameInput, "Введите имя");
         return;
       }
 
-      var nameInput = form.querySelector('input[type="text"]');
-      var emailInput = form.querySelector('input[type="email"]');
-      var phoneInput = form.querySelectorAll('input')[2];
-      var submitBtn = form.querySelector('button[type="submit"]');
+      alert("Настройки сохранены (заглушка, пока нет API)");
+    });
+  }
 
-      // email только из токена
-      var email = API.tokens.email();
-      if (emailInput) {
-        emailInput.value = email || "";
-      }
+  function setNamePlaceholder(input) {
+    if (!input) return;
 
-      form.addEventListener("submit", function (e) {
-        e.preventDefault();
-
-        var payload = {
-          name: nameInput?.value?.trim() || "",
-          phone: phoneInput?.value?.trim() || ""
-        };
-
-        if (submitBtn) {
-          submitBtn.disabled = true;
-          submitBtn.textContent = "Сохранение...";
-        }
-
-        (API.user && API.user.update
-          ? API.user.update(payload)
-          : Promise.resolve()
-        )
-          .then(function () {
-            alert("Настройки сохранены");
-          })
-          .catch(function () {
-            alert("Ошибка сохранения");
-          })
-          .then(function () {
-            if (submitBtn) {
-              submitBtn.disabled = false;
-              submitBtn.textContent = "Сохранить изменения";
-            }
-          });
-      });
+    if (!input.value.trim()) {
+      input.classList.add("input--placeholder");
+      input.value = "";
+      input.placeholder = "Введите имя";
+    } else {
+      input.classList.remove("input--placeholder");
+      input.placeholder = "";
     }
+  }
+
+  function setPhonePlaceholder(input) {
+    if (!input) return;
+
+    if (!input.value.trim()) {
+      input.classList.add("input--placeholder");
+      input.placeholder = "Введите телефон";
+    }
+  }
 })();
