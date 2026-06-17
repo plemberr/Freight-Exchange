@@ -18,6 +18,7 @@
     wireLoginButton();
     wireCreateCargo();
     wireCreateTransport();
+    wireSettings();
   });
   // ещё раз после полной загрузки — перебить возможный показ ссылки из site.js
   window.addEventListener("load", wireModeratorLink);
@@ -495,4 +496,58 @@
     };
   }
 
+  // ============================================================
+  // SETTINGS — профиль пользователя
+  // ============================================================
+  function wireSettings() {
+      var form = document.querySelector(".settings-form");
+      if (!form) return;
+
+      if (!API.tokens.isAuthed) {
+        window.location.replace("auth.html");
+        return;
+      }
+
+      var nameInput = form.querySelector('input[type="text"]');
+      var emailInput = form.querySelector('input[type="email"]');
+      var phoneInput = form.querySelectorAll('input')[2];
+      var submitBtn = form.querySelector('button[type="submit"]');
+
+      // email только из токена
+      var email = API.tokens.email();
+      if (emailInput) {
+        emailInput.value = email || "";
+      }
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        var payload = {
+          name: nameInput?.value?.trim() || "",
+          phone: phoneInput?.value?.trim() || ""
+        };
+
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = "Сохранение...";
+        }
+
+        (API.user && API.user.update
+          ? API.user.update(payload)
+          : Promise.resolve()
+        )
+          .then(function () {
+            alert("Настройки сохранены");
+          })
+          .catch(function () {
+            alert("Ошибка сохранения");
+          })
+          .then(function () {
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = "Сохранить изменения";
+            }
+          });
+      });
+    }
 })();
