@@ -403,6 +403,30 @@
   // ============================================================
   // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ СБОРА ДАННЫХ ИЗ ВИЗАРДА
   // ============================================================
+
+  // Маппинг русских названий из <select> → enum-значения бэка
+  var CARGO_TYPE_MAP = {
+    "Генеральный": "GENERAL",
+    "Рефрижератор": "REFRIGERATED",
+    "Наливной": "LIQUID",
+    "Выбрать": null
+  };
+
+  var TRANSPORT_TYPE_MAP = {
+    "Тентованный": "TENTED",
+    "Рефрижератор": "REFRIGERATED",
+    "Бортовой": "FLATBED",
+    "Выбрать": null
+  };
+
+  function toCargoTypeEnum(ruLabel) {
+    return CARGO_TYPE_MAP[ruLabel] || ruLabel || null;
+  }
+
+  function toTransportTypeEnum(ruLabel) {
+    return TRANSPORT_TYPE_MAP[ruLabel] || ruLabel || null;
+  }
+
   function getVal(stepIndex, inputIndex) {
     var step = document.querySelectorAll("[data-wizard-step]")[stepIndex];
     if (!step) return null;
@@ -422,49 +446,108 @@
     return ta ? (ta.value || "").trim() : "";
   }
 
-  function buildRoute() {
+  // Геокодинг через API бэка — возвращает Promise<{latitude, longitude}>
+  // Если бэк недоступен или вернул ошибку — возвращает null
+  async function geocodeCity(city) {
+    if (!city || !city.trim()) return null;
+    try {
+      var result = await API.routes.geocode(city.trim());
+      // Бэк отдаёт { latitude, longitude } или { lat, lon } — поддерживаем оба варианта
+      var lat = result.latitude != null ? result.latitude : result.lat;
+      var lon = result.longitude != null ? result.longitude : (result.lon != null ? result.lon : result.lng);
+      if (lat != null && lon != null) return { latitude: Number(lat), longitude: Number(lon) };
+    } catch (e) {
+      console.warn("Geocode failed for city:", city, e);
+    }
+    return null;
+  }
+
+  // Собирает route: геокодирует origin и destination параллельно
+  async function buildRoute() {
     var inputs = document.querySelectorAll(".wizard-step input");
+
+    var originCountry  = (inputs[0] && inputs[0].value) || "";
+    var originCity     = (inputs[1] && inputs[1].value) || "";
+    var destCountry    = (inputs[3] && inputs[3].value) || "";
+    var destCity       = (inputs[4] && inputs[4].value) || "";
+
+    // Геокодируем параллельно
+    var coords = await Promise.all([
+      geocodeCity(originCity || originCountry),
+      geocodeCity(destCity || destCountry)
+    ]);
+
+    var originCoords = coords[0] || { latitude: 0, longitude: 0 };
+    var destCoords   = coords[1] || { latitude: 0, longitude: 0 };
+
     return {
       origin: {
-        country: (inputs[0] && inputs[0].value) || "",
-        city: (inputs[1] && inputs[1].value) || ""
+        country:   originCountry,
+        city:      originCity,
+        latitude:  originCoords.latitude,
+        longitude: originCoords.longitude
       },
       destination: {
-        country: (inputs[3] && inputs[3].value) || "",
-        city: (inputs[4] && inputs[4].value) || ""
+        country:   destCountry,
+        city:      destCity,
+        latitude:  destCoords.latitude,
+        longitude: destCoords.longitude
       },
       waypoints: []
     };
   }
 
-  function buildCargoPayload() {
+  // Строит человекочитаемый title из маршрута
+  function buildTitle(originCity, originCountry, destCity, destCountry) {
+    var from = originCity || originCountry || "?";
+    var to   = destCity   || destCountry   || "?";
+    return from + " — " + to;
+  }
+
+  async function buildCargoPayload() {
+    var inputs = document.querySelectorAll(".wizard-step input");
+    var originCity    = (inputs[1] && inputs[1].value) || "";
+    var originCountry = (inputs[0] && inputs[0].value) || "";
+    var destCity      = (inputs[4] && inputs[4].value) || "";
+    var destCountry   = (inputs[3] && inputs[3].value) || "";
+
+    var route = await buildRoute();
+
     return {
       type: "CARGO",
-      title: getVal(0, 0) || "Объявление о грузе",
+      title: buildTitle(originCity, originCountry, destCity, destCountry),
       description: getTextarea(),
-      route: buildRoute(),
+      route: route,
       cargo: {
-        cargoType: getSelect(1, 0),
-        weight: Number(getVal(1, 1)) || 0,
-        length: Number(getVal(1, 2)) || 0,
-        width: Number(getVal(1, 3)) || 0,
-        height: Number(getVal(1, 4)) || 0,
-        volume: null,
-        price: Number(getVal(2, 0)) || 0
+        cargoType: toCargoTypeEnum(getSelect(1, 0)),
+        weight:    Number(getVal(1, 1)) || 0,
+        length:    Number(getVal(1, 2)) || 0,
+        width:     Number(getVal(1, 3)) || 0,
+        height:    Number(getVal(1, 4)) || 0,
+        volume:    0,
+        price:     Number(getVal(2, 0)) || 0
       }
     };
   }
 
-  function buildTransportPayload() {
+  async function buildTransportPayload() {
+    var inputs = document.querySelectorAll(".wizard-step input");
+    var originCity    = (inputs[1] && inputs[1].value) || "";
+    var originCountry = (inputs[0] && inputs[0].value) || "";
+    var destCity      = (inputs[4] && inputs[4].value) || "";
+    var destCountry   = (inputs[3] && inputs[3].value) || "";
+
+    var route = await buildRoute();
+
     return {
       type: "TRANSPORT",
-      title: getVal(0, 0) || "Объявление о транспорте",
+      title: buildTitle(originCity, originCountry, destCity, destCountry),
       description: getTextarea(),
-      route: buildRoute(),
+      route: route,
       transport: {
-        transportType: getSelect(1, 0),
-        maxWeight: Number(getVal(1, 1)) || 0,
-        maxVolume: Number(getVal(1, 2)) || 0
+        transportType: toTransportTypeEnum(getSelect(1, 0)),
+        maxWeight:     Number(getVal(1, 1)) || 0,
+        maxVolume:     Number(getVal(1, 2)) || 0
       }
     };
   }
@@ -488,7 +571,8 @@
     if (publishBtn) {
       publishBtn.addEventListener("click", async function () {
         console.log("CLICK publish cargo");
-        var payload = buildCargoPayload();
+        setButtonLoading(publishBtn, true, "Опубликовать объявление");
+        var payload = await buildCargoPayload();
         console.log("PAYLOAD:", payload);
 
         setButtonLoading(publishBtn, true, "Опубликовать объявление");
@@ -520,12 +604,12 @@
         e.preventDefault();
         console.log("CLICK save draft cargo");
 
-        var payload = buildCargoPayload();
-        console.log("DRAFT PAYLOAD:", payload);
-
         var origText = draftLink.textContent;
         draftLink.textContent = "Сохранение…";
         draftLink.style.pointerEvents = "none";
+
+        var payload = await buildCargoPayload();
+        console.log("DRAFT PAYLOAD:", payload);
 
         try {
           var res = await API.listings.create(payload);
@@ -557,7 +641,8 @@
     if (publishBtn) {
       publishBtn.addEventListener("click", async function () {
         console.log("CLICK publish transport");
-        var payload = buildTransportPayload();
+        setButtonLoading(publishBtn, true, "Опубликовать объявление");
+        var payload = await buildTransportPayload();
         console.log("PAYLOAD:", payload);
 
         setButtonLoading(publishBtn, true, "Опубликовать объявление");
@@ -587,12 +672,12 @@
         e.preventDefault();
         console.log("CLICK save draft transport");
 
-        var payload = buildTransportPayload();
-        console.log("DRAFT PAYLOAD:", payload);
-
         var origText = draftLink.textContent;
         draftLink.textContent = "Сохранение…";
         draftLink.style.pointerEvents = "none";
+
+        var payload = await buildTransportPayload();
+        console.log("DRAFT PAYLOAD:", payload);
 
         try {
           var res = await API.listings.create(payload);
