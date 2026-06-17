@@ -16,6 +16,8 @@
     wireModerationQueue(); // moderator.html — очередь
     wireLogout();
     wireLoginButton();
+    wireCreateCargo();
+    wireCreateTransport();
   });
   // ещё раз после полной загрузки — перебить возможный показ ссылки из site.js
   window.addEventListener("load", wireModeratorLink);
@@ -97,8 +99,6 @@
         var pass = (passEl && passEl.value || "");
         var emailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
         setFieldError(emailEl, emailOk ? null : "Введите корректный адрес почты");
-        var passOk = pass.length >= 6;
-        setFieldError(passEl, passOk ? null : "Пароль должен содержать минимум 6 символов");
         if (!emailOk || !passOk) return;
 
         var op = mode === "register" ? API.auth.register(email, pass) : API.auth.login(email, pass);
@@ -359,6 +359,101 @@
 
       btn.setAttribute("href", "auth.html");
     }
+  }
+
+  function wireCreateCargo() {
+    if (document.body.dataset.page !== "create-cargo") return;
+  
+    const btn = document.getElementById("publishBtn");
+    if (!btn) return;
+  
+    btn.addEventListener("click", async function () {
+      const payload = {
+        type: "CARGO",
+        title: getVal(0, 0),
+        description: getTextarea(),
+        route: buildRoute(),
+        cargo: {
+          cargoType: getSelect(1, 0),
+          weight: getVal(1, 1),
+          length: getVal(1, 2),
+          width: getVal(1, 3),
+          height: getVal(1, 4),
+          volume: null,
+          price: getVal(2, 0)
+        }
+      };
+  
+      try {
+        await API.listings.create(payload);
+        window.location.href = "cabinet.html";
+      } catch (e) {
+        alert("Ошибка создания объявления");
+        console.error(e);
+      }
+    });
+  }
+
+  function wireCreateTransport() {
+    if (document.body.dataset.page !== "create-transport") return;
+  
+    const btn = document.getElementById("publishBtn");
+    if (!btn) return;
+  
+    btn.addEventListener("click", async function () {
+      const payload = {
+        type: "TRANSPORT",
+        title: getVal(0, 0),
+        description: getTextarea(),
+        route: buildRoute(),
+        transport: {
+          transportType: getSelect(1, 0),
+          maxWeight: getVal(1, 1),
+          maxVolume: getVal(1, 2)
+        }
+      };
+  
+      try {
+        await API.listings.create(payload);
+        window.location.href = "cabinet.html";
+      } catch (e) {
+        alert("Ошибка создания транспорта");
+        console.error(e);
+      }
+    });
+  }
+
+  function getVal(stepIndex, inputIndex) {
+    const step = document.querySelectorAll("[data-wizard-step]")[stepIndex];
+    const inputs = step.querySelectorAll("input, select, textarea");
+    return inputs[inputIndex]?.value?.trim() || null;
+  }
+  
+  function getSelect(stepIndex, index) {
+    const step = document.querySelectorAll("[data-wizard-step]")[stepIndex];
+    const sel = step.querySelectorAll("select")[index];
+    return sel?.value || null;
+  }
+  
+  function getTextarea() {
+    const ta = document.querySelector("textarea");
+    return ta?.value?.trim() || "";
+  }
+  
+  function buildRoute() {
+    const inputs = document.querySelectorAll(".wizard-step input");
+  
+    return {
+      origin: {
+        country: inputs[0]?.value,
+        city: inputs[1]?.value
+      },
+      destination: {
+        country: inputs[3]?.value,
+        city: inputs[4]?.value
+      },
+      waypoints: []
+    };
   }
 
 })();

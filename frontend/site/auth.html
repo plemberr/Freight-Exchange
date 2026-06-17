@@ -48,7 +48,7 @@
       </div>
 
       <!-- Панель: Вход -->
-      <form class="auth-form tab-panel" id="panel-login" data-tab-panel data-auth-form="login" data-redirect="cabinet.html" novalidate>
+      <form class="auth-form tab-panel" id="panel-login" data-tab-panel data-validate data-redirect="cabinet.html" novalidate>
         <div class="field">
           <label class="field__label" for="login-email">Почта</label>
           <input class="input" id="login-email" type="email" placeholder="Введите почту" autocomplete="email">
@@ -57,13 +57,13 @@
           <label class="field__label" for="login-pass">Пароль</label>
           <input class="input" id="login-pass" type="password" placeholder="Введите пароль" autocomplete="current-password">
         </div>
-        <button class="btn btn--primary btn--block" type="submit">Продолжить</button>
-        <div class="divider">или</div>
-        <button class="btn btn--outline btn--block" type="button">Войти через … …</button>
+        <button class="btn btn--primary btn--block" type="submit">
+          Продолжить
+        </button>
       </form>
 
       <!-- Панель: Регистрация -->
-      <form class="auth-form tab-panel" id="panel-register" data-tab-panel data-auth-form="register" data-redirect="cabinet.html" novalidate hidden>
+      <form class="auth-form tab-panel" id="panel-register" data-tab-panel data-validate data-redirect="cabinet.html" novalidate hidden>
         <div class="field">
           <label class="field__label" for="reg-email">Почта</label>
           <input class="input" id="reg-email" type="email" placeholder="Введите почту" autocomplete="email">
@@ -78,8 +78,6 @@
     </div>
   </main>
 
-  <script src="js/api.js"></script>
-  <script src="js/integration.js"></script>
   <script src="js/site.js"></script>
 </body>
 </html>
