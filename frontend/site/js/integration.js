@@ -20,6 +20,7 @@
     wireCreateTransport();
     wireSettings();
     wireEditTransport();
+    wireListingTypeSelector();
   });
   // ещё раз после полной загрузки — перебить возможный показ ссылки из site.js
   window.addEventListener("load", wireModeratorLink);
@@ -779,4 +780,27 @@
         });
     });
   }
+
+    // ============================================================
+    // ПЕРЕКЛЮЧЕНИЕ ГРУЗ <-> ТРАНСПОРТ
+    // ============================================================
+    function wireListingTypeSelector() {
+      var wrapper = document.querySelector("[data-type-select]");
+      if (!wrapper) return;
+
+      var select = wrapper.querySelector("select");
+      if (!select) return;
+
+      select.addEventListener("change", function () {
+        var value = (select.value || "").trim().toLowerCase();
+
+        if (value === "транспорт") {
+          window.location.href = "create-transport.html";
+        }
+
+        if (value === "груз") {
+          window.location.href = "create-cargo.html";
+        }
+      });
+    }
 })();
