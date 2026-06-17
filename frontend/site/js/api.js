@@ -164,19 +164,19 @@ window.FreightAPI = (function () {
     // AUTH (по твоему контракту)
     // -------------------------
     auth: {
-      registry: (loginOrEmail, password) =>
+      registry: (email, password) =>
         request("/auth/registry", {
           method: "POST",
-          body: { loginOrEmail, password }
+          body: { email, password }
         }).then(auth => {
           tokens.save(auth);
           return auth;
         }),
 
-      login: (loginOrEmail, password) =>
+      login: (email, password) =>
         request("/auth/login", {
           method: "POST",
-          body: { loginOrEmail, password }
+          body: { email, password }
         }).then(auth => {
           tokens.save(auth);
           return auth;
