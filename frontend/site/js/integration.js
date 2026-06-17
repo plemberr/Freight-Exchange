@@ -326,42 +326,47 @@
   // КНОПКА ВОЙТИ / ВЫЙТИ В ШАПКЕ
   // ============================================================
   function wireLoginButton() {
-    var btn = document.querySelector("[data-login-btn]");
-    if (!btn) return;
+      console.log("wireLoginButton called");
 
-    var textNode = Array.from(btn.childNodes).find(function (node) {
-      return node.nodeType === Node.TEXT_NODE;
-    });
+      var btn = document.querySelector("[data-login-btn]");
+      if (!btn) return;
 
-    if (API.tokens.isAuthed) {
+      var actions = btn.parentElement;
 
-      if (textNode) {
-        textNode.textContent = "Выйти ";
-      }
+      var authed = API.tokens.isAuthed;
+      console.log("isAuthed =", authed);
 
-      btn.removeAttribute("href");
+      // всегда удаляем старую кнопку профиля (чтобы не было дублей)
+      var oldProfile = document.querySelector("[data-profile-btn]");
+      if (oldProfile) oldProfile.remove();
 
-      btn.addEventListener("click", function (e) {
-        e.preventDefault();
+      if (authed) {
+        // создать "Профиль"
+        var profileBtn = document.createElement("a");
+        profileBtn.href = "cabinet.html";
+        profileBtn.className = "btn btn--outline";
+        profileBtn.setAttribute("data-profile-btn", "");
+        profileBtn.textContent = "Профиль";
 
-        API.auth.logout()
-          .then(function () {
-            window.location.href = "index.html";
-          })
-          .catch(function () {
+        actions.insertBefore(profileBtn, btn);
+
+        // изменить кнопку логина на "Выйти"
+        btn.innerHTML = 'Выйти <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path></svg>';
+
+        btn.removeAttribute("href");
+
+        btn.onclick = function (e) {
+          e.preventDefault();
+          API.auth.logout().then(function () {
             window.location.href = "index.html";
           });
-      });
+        };
 
-    } else {
-
-      if (textNode) {
-        textNode.textContent = "Войти ";
+      } else {
+        btn.innerHTML = 'Войти <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path></svg>';
+        btn.setAttribute("href", "auth.html");
       }
-
-      btn.setAttribute("href", "auth.html");
     }
-  }
 
   function wireCreateCargo() {
     if (document.body.dataset.page !== "create-cargo") return;
