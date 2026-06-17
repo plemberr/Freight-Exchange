@@ -21,6 +21,7 @@
     wireSettings();
     wireEditTransport();
     wireListingTypeSelector();
+    wireEditCargo();
   });
   // ещё раз после полной загрузки — перебить возможный показ ссылки из site.js
   window.addEventListener("load", wireModeratorLink);
@@ -886,6 +887,131 @@
           transportType: getField("transport.transportType"),
           maxWeight: Number(getField("transport.maxWeight")),
           maxVolume: Number(getField("transport.maxVolume"))
+        }
+      };
+
+      btn.disabled = true;
+
+      API.listings.update(id, payload)
+        .then(function () {
+          window.location.href = "cabinet.html";
+        })
+        .catch(function (err) {
+          console.error(err);
+          alert("Ошибка сохранения");
+        })
+        .finally(function () {
+          btn.disabled = false;
+        });
+    });
+  }
+
+  // ============================================================
+  // EDIT CARGO
+  // ============================================================
+  function wireEditCargo() {
+
+    console.log("wireEditCargo started");
+
+    if (document.body.dataset.page !== "edit-cargo") return;
+
+    if (!API.tokens.isAuthed) {
+      window.location.replace("auth.html");
+      return;
+    }
+
+    var id = new URLSearchParams(location.search).get("id");
+    if (!id) return;
+
+    var form = document.querySelector("form");
+    if (!form) return;
+
+    var btn = form.querySelector("button[type='submit']");
+
+    function setField(key, value) {
+      var el = form.querySelector('[data-field="' + key + '"]');
+      if (el) el.value = value ?? "";
+    }
+
+    function getField(key) {
+      var el = form.querySelector('[data-field="' + key + '"]');
+      return el ? el.value : "";
+    }
+
+    // =========================
+    // LOAD
+    // =========================
+    API.listings.get(id)
+      .then(function (data) {
+        if (!data) return;
+
+        // base
+        setField("description", data.description);
+        setField("title", data.title);
+
+        // route
+        setField("route.origin.country", data.route?.origin?.country);
+        setField("route.origin.city", data.route?.origin?.city);
+        setField("route.origin.address", data.route?.origin?.address || "");
+
+        setField("route.destination.country", data.route?.destination?.country);
+        setField("route.destination.city", data.route?.destination?.city);
+        setField("route.destination.address", data.route?.destination?.address || "");
+
+        // cargo
+        setField("cargo.cargoType", data.cargo?.cargoType);
+        setField("cargo.length", data.cargo?.length);
+        setField("cargo.width", data.cargo?.width);
+        setField("cargo.height", data.cargo?.height);
+        setField("cargo.weight", data.cargo?.weight);
+        setField("cargo.volume", data.cargo?.volume);
+        setField("cargo.price", data.cargo?.price);
+      })
+      .catch(function (err) {
+        console.error(err);
+
+        if (err.status === 401 || err.status === 403) {
+          alert("Нет доступа к объявлению");
+          window.location.replace("cabinet.html");
+        } else {
+          alert("Ошибка загрузки объявления");
+        }
+      });
+
+    // =========================
+    // SAVE
+    // =========================
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      var payload = {
+        type: "CARGO",
+
+        title: getField("title"),
+        description: getField("description"),
+
+        route: {
+          origin: {
+            country: getField("route.origin.country"),
+            city: getField("route.origin.city"),
+            address: getField("route.origin.address")
+          },
+          destination: {
+            country: getField("route.destination.country"),
+            city: getField("route.destination.city"),
+            address: getField("route.destination.address")
+          },
+          waypoints: []
+        },
+
+        cargo: {
+          cargoType: getField("cargo.cargoType"),
+          length: Number(getField("cargo.length")),
+          width: Number(getField("cargo.width")),
+          height: Number(getField("cargo.height")),
+          weight: Number(getField("cargo.weight")),
+          volume: Number(getField("cargo.volume")),
+          price: Number(getField("cargo.price"))
         }
       };
 
