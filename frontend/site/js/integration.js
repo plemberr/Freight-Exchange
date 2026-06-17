@@ -420,66 +420,83 @@
     }
 
   function wireCreateCargo() {
-    if (document.body.dataset.page !== "create-cargo") return;
-  
-    const btn = document.getElementById("publishBtn");
-    if (!btn) return;
-  
-    btn.addEventListener("click", async function () {
-      const payload = {
-        type: "CARGO",
-        title: getVal(0, 0),
-        description: getTextarea(),
-        route: buildRoute(),
-        cargo: {
-          cargoType: getSelect(1, 0),
-          weight: getVal(1, 1),
-          length: getVal(1, 2),
-          width: getVal(1, 3),
-          height: getVal(1, 4),
-          volume: null,
-          price: getVal(2, 0)
-        }
-      };
-  
-      try {
-        await API.listings.create(payload);
-        window.location.href = "cabinet.html";
-      } catch (e) {
-        alert("Ошибка создания объявления");
-        console.error(e);
+      console.log("wireCreateCargo init");
+
+      if (document.body.dataset.page !== "cargo") return;
+
+      const btn = document.getElementById("publishBtn");
+      if (!btn) {
+        console.warn("publishBtn not found");
+        return;
       }
-    });
-  }
+
+      btn.addEventListener("click", async function () {
+        console.log("CLICK publish cargo");
+
+        const payload = {
+          type: "CARGO",
+          title: getVal(0, 0),
+          description: getTextarea(),
+          route: buildRoute(),
+          cargo: {
+            cargoType: getSelect(1, 0),
+            weight: Number(getVal(1, 1)),
+            length: Number(getVal(1, 2)),
+            width: Number(getVal(1, 3)),
+            height: Number(getVal(1, 4)),
+            volume: null,
+            price: Number(getVal(2, 0))
+          }
+        };
+
+        console.log("PAYLOAD:", payload);
+
+        try {
+          const res = await API.listings.create(payload);
+          console.log("CREATED:", res);
+
+          window.location.href = "cabinet.html";
+        } catch (e) {
+          console.error("CREATE ERROR:", e);
+          alert("Ошибка создания объявления");
+        }
+      });
+    }
 
   function wireCreateTransport() {
-    if (document.body.dataset.page !== "create-transport") return;
-  
-    const btn = document.getElementById("publishBtn");
-    if (!btn) return;
-  
-    btn.addEventListener("click", async function () {
-      const payload = {
-        type: "TRANSPORT",
-        title: getVal(0, 0),
-        description: getTextarea(),
-        route: buildRoute(),
-        transport: {
-          transportType: getSelect(1, 0),
-          maxWeight: getVal(1, 1),
-          maxVolume: getVal(1, 2)
+      console.log("wireCreateTransport init");
+
+      if (document.body.dataset.page !== "transport") return;
+
+      const btn = document.getElementById("publishBtn");
+      if (!btn) return;
+
+      btn.addEventListener("click", async function () {
+        console.log("CLICK publish transport");
+
+        const payload = {
+          type: "TRANSPORT",
+          title: getVal(0, 0),
+          description: getTextarea(),
+          route: buildRoute(),
+          transport: {
+            transportType: getSelect(1, 0),
+            maxWeight: Number(getVal(1, 1)),
+            maxVolume: Number(getVal(1, 2))
+          }
+        };
+
+        console.log("PAYLOAD:", payload);
+
+        try {
+          await API.listings.create(payload);
+          window.location.href = "cabinet.html";
+        } catch (e) {
+          console.error(e);
+          alert("Ошибка создания транспорта");
         }
-      };
-  
-      try {
-        await API.listings.create(payload);
-        window.location.href = "cabinet.html";
-      } catch (e) {
-        alert("Ошибка создания транспорта");
-        console.error(e);
-      }
-    });
-  }
+      });
+    }
 
   function getVal(stepIndex, inputIndex) {
     const step = document.querySelectorAll("[data-wizard-step]")[stepIndex];
