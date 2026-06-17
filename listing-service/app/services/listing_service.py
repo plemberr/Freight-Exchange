@@ -8,16 +8,9 @@ from app.db.models.point import Point
 from app.db.models.route import Route
 from app.db.models.route_waypoint import RouteWaypoint
 
-from app.db.enums.listing import (
-    ListingStatus,
-    ListingType
-)
+from app.db.enums.listing import ListingStatus, ListingType
 
 from app.repositories.listing_repository import ListingRepository
-from app.repositories.cargo_repository import CargoRepository
-from app.repositories.transport_repository import TransportRepository
-from app.repositories.point_repository import PointRepository
-from app.repositories.route_repository import RouteRepository
 
 from app.schemas.listing import (
     CreateListingRequest,
@@ -39,54 +32,35 @@ class ListingService:
 
     def __init__(self):
         self.listing_repo = ListingRepository()
-        self.cargo_repo = CargoRepository()
-        self.transport_repo = TransportRepository()
-        self.point_repo = PointRepository()
-        self.route_repo = RouteRepository()
-
         self.cargo_client = CargoClient()
         self.route_client = RouteClient()
 
+    # =========================================================
+    # CREATE
+    # =========================================================
     async def create_listing(
         self,
         db: Session,
         user_id: str,
         data: CreateListingRequest
     ):
-
         try:
 
-            # =========================
+            # -------------------------
             # VALIDATION
-            # =========================
-            if data.type == ListingType.CARGO:
+            # -------------------------
+            if data.type == ListingType.CARGO and not data.cargo:
+                raise HTTPException(400, "Cargo data required")
 
-                if not data.cargo:
-                    raise HTTPException(
-                        400,
-                        "Cargo data required"
-                    )
+            if data.type == ListingType.TRANSPORT and data.cargo:
+                raise HTTPException(400, "Transport listing cannot contain cargo")
 
-                if (
-                    data.cargo.price is not None
-                    and data.cargo.price < 0
-                ):
-                    raise HTTPException(
-                        400,
-                        "Price must be >= 0"
-                    )
+            if data.cargo and data.cargo.price is not None and data.cargo.price < 0:
+                raise HTTPException(400, "Price must be >= 0")
 
-            if data.type == ListingType.TRANSPORT:
-
-                if data.cargo:
-                    raise HTTPException(
-                        400,
-                        "Transport listing cannot contain cargo"
-                    )
-
-            # =========================
+            # -------------------------
             # LISTING
-            # =========================
+            # -------------------------
             listing = Listing(
                 owner_id=user_id,
                 type=data.type,
@@ -95,102 +69,79 @@ class ListingService:
                 status=ListingStatus.DRAFT
             )
 
-            self.listing_repo.create(db, listing)
+            db.add(listing)
+            db.flush()  # get listing.id
 
-            # =========================
+            # -------------------------
             # ROUTE
-            # =========================
-            origin = self.point_repo.create(
-                db,
-                Point(**data.route.origin.model_dump())
-            )
+            # -------------------------
+            origin = Point(**data.route.origin.model_dump())
+            destination = Point(**data.route.destination.model_dump())
 
-            destination = self.point_repo.create(
-                db,
-                Point(**data.route.destination.model_dump())
-            )
+            db.add_all([origin, destination])
+            db.flush()
 
             route_data = await self.route_client.calculate_route(
                 origin=data.route.origin.model_dump(),
                 destination=data.route.destination.model_dump(),
-                waypoints=[
-                    w.model_dump()
-                    for w in data.route.waypoints
-                ]
+                waypoints=[w.model_dump() for w in data.route.waypoints]
             )
 
-            route = self.route_repo.create_route(
-                db,
-                Route(
-                    listing_id=listing.id,
-                    origin_id=origin.id,
-                    destination_id=destination.id,
-                    distance_km=route_data["distanceKm"]
-                )
+            route = Route(
+                listing_id=listing.id,
+                origin_id=origin.id,
+                destination_id=destination.id,
+                distance_km=route_data["distanceKm"]
             )
 
+            db.add(route)
+            db.flush()
+
+            # waypoints
             for idx, wp in enumerate(data.route.waypoints):
+                point = Point(**wp.model_dump())
+                db.add(point)
+                db.flush()
 
-                point = self.point_repo.create(
-                    db,
-                    Point(**wp.model_dump())
-                )
+                db.add(RouteWaypoint(
+                    route_id=route.id,
+                    point_id=point.id,
+                    order_index=idx
+                ))
 
-                self.route_repo.create_waypoint(
-                    db,
-                    RouteWaypoint(
-                        route_id=route.id,
-                        point_id=point.id,
-                        order_index=idx
-                    )
-                )
-
-            # =========================
-            # CARGO
-            # =========================
+            # -------------------------
+            # CARGO (ORM ATTACH)
+            # -------------------------
             if data.cargo:
-
                 volume = await self.cargo_client.calculate_volume(
                     data.cargo.length,
                     data.cargo.width,
                     data.cargo.height
                 )
 
-                self.cargo_repo.create(
-                    db,
-                    Cargo(
-                        listing_id=listing.id,
-                        cargo_type=data.cargo.cargoType,
-                        weight=data.cargo.weight,
-                        volume=volume,
-                        length=data.cargo.length,
-                        width=data.cargo.width,
-                        height=data.cargo.height,
-                        price=data.cargo.price
-                    )
+                listing.cargo = Cargo(
+                    cargo_type=data.cargo.cargoType,
+                    weight=data.cargo.weight,
+                    volume=volume,
+                    length=data.cargo.length,
+                    width=data.cargo.width,
+                    height=data.cargo.height,
+                    price=data.cargo.price
                 )
 
-            # =========================
-            # TRANSPORT
-            # =========================
+            # -------------------------
+            # TRANSPORT (FIXED)
+            # -------------------------
             if data.transport:
-
-                self.transport_repo.create(
-                    db,
-                    Transport(
-                        listing_id=listing.id,
-                        transport_type=data.transport.transportType,
-                        max_weight=data.transport.maxWeight,
-                        max_volume=data.transport.maxVolume
-                    )
+                listing.transport = Transport(
+                    transport_type=data.transport.transportType,
+                    max_weight=data.transport.maxWeight,
+                    max_volume=data.transport.maxVolume
                 )
 
             db.commit()
             db.refresh(listing)
 
-            # =========================
-            # EVENT
-            # =========================
             await send_event(
                 LISTING_CREATED_TOPIC,
                 {
@@ -207,17 +158,16 @@ class ListingService:
             db.rollback()
             raise
 
+    # =========================================================
+    # DELETE
+    # =========================================================
     async def delete_listing(
         self,
         db: Session,
         listing_id: str,
         user_id: str
     ):
-
-        listing = self.listing_repo.get_by_id(
-            db,
-            listing_id
-        )
+        listing = self.listing_repo.get_by_id(db, listing_id)
 
         if not listing:
             raise HTTPException(404, "Listing not found")
@@ -226,80 +176,51 @@ class ListingService:
             raise HTTPException(403, "Forbidden")
 
         try:
-
             await send_event(
                 LISTING_DELETED_TOPIC,
-                {
-                    "listingId": str(listing.id)
-                }
+                {"listingId": str(listing.id)}
             )
 
-            self.listing_repo.delete(
-                db,
-                listing
-            )
-
+            db.delete(listing)
             db.commit()
+
+            return {"status": "deleted", "id": listing_id}
 
         except Exception:
             db.rollback()
             raise
 
-        return {
-            "status": "deleted",
-            "id": listing_id
-        }
-
-    def get_listing(
-        self,
-        db: Session,
-        listing_id: str,
-        user_id: str | None = None
-    ):
-
-        listing = self.listing_repo.get_by_id(
-            db,
-            listing_id
-        )
+    # =========================================================
+    # GET
+    # =========================================================
+    def get_listing(self, db: Session, listing_id: str, user_id: str | None = None):
+        listing = self.listing_repo.get_by_id(db, listing_id)
 
         if not listing:
             raise HTTPException(404, "Listing not found")
 
-        # ACTIVE listings are public
         if listing.status == ListingStatus.ACTIVE:
             return listing
 
-        # non-active доступны только владельцу
-        if not user_id:
-            raise HTTPException(403, "Forbidden")
-
-        if str(listing.owner_id) != str(user_id):
+        if not user_id or str(listing.owner_id) != str(user_id):
             raise HTTPException(403, "Forbidden")
 
         return listing
 
-    def get_my_listings(
-        self,
-        db: Session,
-        user_id: str,
-        status: str | None = None
-    ):
-
-        listings = self.listing_repo.get_by_owner(
-            db,
-            user_id
-        )
+    # =========================================================
+    # MY LISTINGS
+    # =========================================================
+    def get_my_listings(self, db: Session, user_id: str, status: str | None = None):
+        listings = self.listing_repo.get_by_owner(db, user_id)
 
         if status:
-
-            return [
-                listing
-                for listing in listings
-                if listing.status.value == status
-            ]
+            return [l for l in listings if l.status.value == status]
 
         return listings
 
+    # =========================================================
+    # UPDATE
+    # =========================================================
     async def update_listing(
         self,
         db: Session,
@@ -307,11 +228,7 @@ class ListingService:
         user_id: str,
         data: UpdateListingRequest
     ):
-
-        listing = self.listing_repo.get_by_id(
-            db,
-            listing_id
-        )
+        listing = self.listing_repo.get_by_id(db, listing_id)
 
         if not listing:
             raise HTTPException(404, "Listing not found")
@@ -319,201 +236,83 @@ class ListingService:
         if str(listing.owner_id) != str(user_id):
             raise HTTPException(403, "Forbidden")
 
-        # =========================
-        # BASIC FIELDS
-        # =========================
         if data.title is not None:
             listing.title = data.title
 
         if data.description is not None:
             listing.description = data.description
 
-        # =========================
+        # -------------------------
         # CARGO
-        # =========================
+        # -------------------------
         if data.cargo:
-
             if listing.type != ListingType.CARGO:
-                raise HTTPException(
-                    400,
-                    "Only cargo listings can contain cargo data"
-                )
-
-            if (
-                data.cargo.price is not None
-                and data.cargo.price < 0
-            ):
-                raise HTTPException(
-                    400,
-                    "Price must be >= 0"
-                )
+                raise HTTPException(400, "Only cargo listings can contain cargo data")
 
             if not listing.cargo:
+                listing.cargo = Cargo()
 
-                listing.cargo = Cargo(
-                    listing_id=listing.id
+            for k, v in data.cargo.model_dump(exclude_unset=True).items():
+                setattr(listing.cargo, "cargo_type" if k == "cargoType" else k, v)
+
+            if all([
+                listing.cargo.length,
+                listing.cargo.width,
+                listing.cargo.height
+            ]):
+                listing.cargo.volume = await self.cargo_client.calculate_volume(
+                    listing.cargo.length,
+                    listing.cargo.width,
+                    listing.cargo.height
                 )
 
-            cargo_data = data.cargo.model_dump(
-                exclude_unset=True
-            )
-
-            for k, v in cargo_data.items():
-
-                field_name = (
-                    "cargo_type"
-                    if k == "cargoType"
-                    else k
-                )
-
-                setattr(
-                    listing.cargo,
-                    field_name,
-                    v
-                )
-
-            # volume recalc
-            if (
-                listing.cargo.length is not None
-                and listing.cargo.width is not None
-                and listing.cargo.height is not None
-            ):
-
-                listing.cargo.volume = (
-                    await self.cargo_client.calculate_volume(
-                        listing.cargo.length,
-                        listing.cargo.width,
-                        listing.cargo.height
-                    )
-                )
-
-        # =========================
+        # -------------------------
         # TRANSPORT
-        # =========================
+        # -------------------------
         if data.transport:
-
             if not listing.transport:
+                listing.transport = Transport()
 
-                listing.transport = Transport(
-                    listing_id=listing.id
-                )
-
-            transport_data = data.transport.model_dump(
-                exclude_unset=True
-            )
-
-            for k, v in transport_data.items():
-
-                field_name = (
-                    "transport_type"
-                    if k == "transportType"
-                    else k
-                )
-
+            for k, v in data.transport.model_dump(exclude_unset=True).items():
                 setattr(
                     listing.transport,
-                    field_name,
+                    "transport_type" if k == "transportType" else k,
                     v
                 )
 
-        # =========================
-        # RE-MODERATION LOGIC
-        # =========================
-        should_resend_to_moderation = (
-            listing.status == ListingStatus.MODERATION
-            or listing.status == ListingStatus.ACTIVE
+        # -------------------------
+        # MODERATION
+        # -------------------------
+        should_resend = listing.status in (
+            ListingStatus.MODERATION,
+            ListingStatus.ACTIVE
         )
 
-        if should_resend_to_moderation:
+        if should_resend:
             listing.status = ListingStatus.MODERATION
 
         db.commit()
-        db.refresh(listing)
+        listing = self.listing_repo.get_by_id(db, listing.id)
 
-        # =========================
-        # RE-SEND TO MODERATION
-        # =========================
-        if should_resend_to_moderation:
-
-            event = {
-                "listingId": str(listing.id),
-                "ownerId": str(listing.owner_id),
-
-                "title": listing.title,
-                "description": listing.description,
-                "type": listing.type.value,
-
-                "cargo": None,
-                "transport": None,
-                "route": None
-            }
-
-            if listing.cargo:
-                event["cargo"] = {
-                    "cargoType": listing.cargo.cargo_type,
-                    "weight": listing.cargo.weight,
-                    "volume": listing.cargo.volume,
-                    "length": listing.cargo.length,
-                    "width": listing.cargo.width,
-                    "height": listing.cargo.height,
-                    "price": listing.cargo.price
-                }
-
-            if listing.transport:
-                event["transport"] = {
-                    "transportType": listing.transport.transport_type,
-                    "maxWeight": listing.transport.max_weight,
-                    "maxVolume": listing.transport.max_volume,
-                }
-
-            if listing.route:
-                event["route"] = {
-                    "origin": {
-                        "city": listing.route.origin.city,
-                        "country": listing.route.origin.country,
-                        "latitude": listing.route.origin.latitude,
-                        "longitude": listing.route.origin.longitude,
-                    } if listing.route.origin else None,
-
-                    "destination": {
-                        "city": listing.route.destination.city,
-                        "country": listing.route.destination.country,
-                        "latitude": listing.route.destination.latitude,
-                        "longitude": listing.route.destination.longitude,
-                    } if listing.route.destination else None,
-
-                    "waypoints": [
-                        {
-                            "city": w.point.city,
-                            "country": w.point.country,
-                            "latitude": w.point.latitude,
-                            "longitude": w.point.longitude,
-                        }
-                        for w in listing.route.waypoints
-                        if w.point
-                    ],
-
-                    "distanceKm": listing.route.distance_km
-                }
-
+        if should_resend:
             await send_event(
                 LISTING_SENT_TO_MODERATION_TOPIC,
-                event
+                {
+                    "listingId": str(listing.id),
+                    "ownerId": str(listing.owner_id),
+                    "title": listing.title,
+                    "description": listing.description,
+                    "type": listing.type.value,
+                }
             )
 
         return listing
 
-    async def send_to_moderation(
-        self,
-        db: Session,
-        listing_id: str,
-        user_id: str
-    ):
-
-        listing = self.listing_repo.get_by_id(
-            db,
-            listing_id
-        )
+    # =========================================================
+    # SEND TO MODERATION
+    # =========================================================
+    async def send_to_moderation(self, db: Session, listing_id: str, user_id: str):
+        listing = self.listing_repo.get_by_id(db, listing_id)
 
         if not listing:
             raise HTTPException(404, "Listing not found")
@@ -521,78 +320,18 @@ class ListingService:
         if str(listing.owner_id) != str(user_id):
             raise HTTPException(403, "Forbidden")
 
-        if listing.status not in [
-            ListingStatus.DRAFT,
-            ListingStatus.REJECTED
-        ]:
-            raise HTTPException(
-                400,
-                "Only draft listings can be sent to moderation"
-            )
-
         listing.status = ListingStatus.MODERATION
-
         db.commit()
-
-        listing = self.listing_repo.get_by_id(
-            db,
-            str(listing.id)
-        )
+        db.refresh(listing)
 
         await send_event(
             LISTING_SENT_TO_MODERATION_TOPIC,
             {
                 "listingId": str(listing.id),
                 "ownerId": str(listing.owner_id),
-
                 "title": listing.title,
                 "description": listing.description,
                 "type": listing.type.value,
-
-                "cargo": {
-                    "cargoType": listing.cargo.cargo_type,
-                    "weight": listing.cargo.weight,
-                    "volume": listing.cargo.volume,
-                    "length": listing.cargo.length,
-                    "width": listing.cargo.width,
-                    "height": listing.cargo.height,
-                    "price": listing.cargo.price,
-                } if listing.cargo else None,
-
-                "transport": {
-                    "transportType": listing.transport.transport_type,
-                    "maxWeight": listing.transport.max_weight,
-                    "maxVolume": listing.transport.max_volume,
-                } if listing.transport else None,
-
-                "route": {
-                    "origin": {
-                        "city": listing.route.origin.city,
-                        "country": listing.route.origin.country,
-                        "latitude": listing.route.origin.latitude,
-                        "longitude": listing.route.origin.longitude,
-                    } if listing.route and listing.route.origin else None,
-
-                    "destination": {
-                        "city": listing.route.destination.city,
-                        "country": listing.route.destination.country,
-                        "latitude": listing.route.destination.latitude,
-                        "longitude": listing.route.destination.longitude,
-                    } if listing.route and listing.route.destination else None,
-
-                    "waypoints": [
-                        {
-                            "city": waypoint.point.city,
-                            "country": waypoint.point.country,
-                            "latitude": waypoint.point.latitude,
-                            "longitude": waypoint.point.longitude,
-                        }
-                        for waypoint in listing.route.waypoints
-                    ] if listing.route and listing.route.waypoints else [],
-
-                    "distanceKm": listing.route.distance_km
-                    if listing.route else None,
-                } if listing.route else None,
             }
         )
 

@@ -40,14 +40,20 @@ class ListingRepository:
             .first()
         )
 
-    def get_by_owner(
-        self,
-        db: Session,
-        owner_id: str
-    ) -> list[Listing]:
-
+    def get_by_owner(self, db: Session, owner_id: str) -> list[Listing]:
         return (
             db.query(Listing)
+            .options(
+                selectinload(Listing.cargo),
+                selectinload(Listing.transport),
+                selectinload(Listing.route)
+                    .selectinload(Route.origin),
+                selectinload(Listing.route)
+                    .selectinload(Route.destination),
+                selectinload(Listing.route)
+                    .selectinload(Route.waypoints)
+                    .selectinload(RouteWaypoint.point),
+            )
             .filter(Listing.owner_id == owner_id)
             .all()
         )
