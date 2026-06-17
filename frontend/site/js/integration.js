@@ -20,6 +20,7 @@
     wireCreateCargo();
     wireCreateTransport();
     wireSettings();
+    wireSendToModeration();
     wireEditTransport();
     wireEditCargo();
     wireListingTypeSelector();
@@ -1090,6 +1091,44 @@
         .catch(function (err) {
           console.error(err);
           alert("Не удалось сохранить изменения");
+        });
+    });
+  }
+
+  // ============================================================
+  // SEND TO MODERATION (CARGO + TRANSPORT)
+  // ============================================================
+  function wireSendToModeration() {
+
+    var btn = document.querySelector("[data-send-moderation]");
+    if (!btn) return;
+
+    var id = new URLSearchParams(location.search).get("id");
+    if (!id) return;
+
+    btn.addEventListener("click", function () {
+
+      var originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "Отправка...";
+
+      API.listings.sendToModeration(id)
+        .then(function () {
+          alert("Объявление отправлено на модерацию");
+          window.location.href = "cabinet.html";
+        })
+        .catch(function (err) {
+          console.error(err);
+
+          if (err.status === 403) {
+            alert("Нет прав для отправки");
+          } else {
+            alert("Ошибка отправки на модерацию");
+          }
+        })
+        .finally(function () {
+          btn.disabled = false;
+          btn.textContent = originalText;
         });
     });
   }
