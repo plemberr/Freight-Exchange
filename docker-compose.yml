@@ -369,6 +369,30 @@ services:
       - "8004:8000"
 
 
+  # ==================================
+  # FRONTEND (статика + reverse proxy / API gateway)
+  # ==================================
+
+  frontend:
+    build:
+      context: ./frontend
+
+    container_name: freighthub-frontend
+    restart: always
+
+    depends_on:
+      - auth-service
+      - user-service
+      - listing-service
+      - search-service
+      - moderation-service
+      - cargo-service
+      - route-service
+
+    ports:
+      - "8080:80"
+
+
 # ==================================
 # VOLUMES
 # ==================================

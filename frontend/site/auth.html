@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Вход и регистрация — FreightHub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"></noscript>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="" data-login="solid">
+  <header class="header">
+    <div class="container header__inner">
+      <a href="index.html" class="logo">Freight<b>Hub</b></a>
+      <nav class="nav" data-nav-menu aria-label="Основная навигация">
+        <a href="index.html" class="nav__link" data-nav-key="home">Главная</a>
+        <a href="search-cargo.html" class="nav__link" data-nav-key="cargo">Найти груз</a>
+        <a href="search-transport.html" class="nav__link" data-nav-key="transport">Найти транспорт</a>
+        <a href="about.html" class="nav__link" data-nav-key="about">О сервисе</a>
+        <a href="index.html#contacts" class="nav__link" data-nav-key="contacts">Контакты</a>
+        <a href="moderator.html" class="nav__link" data-nav-key="moderation" data-mod-link hidden>Модерация</a>
+      </nav>
+      <div class="header__actions">
+        <button class="lang" type="button">RU
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <a href="auth.html" class="btn btn--primary" data-login-btn>Войти
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
+        </a>
+        <button class="burger" data-burger type="button" aria-label="Меню" aria-expanded="false"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="auth">
+    <div class="auth-card" data-tabs>
+      <div class="auth-card__brand">
+        <span class="logo">Freight<b>Hub</b></span>
+        <div class="auth-card__sub">Создание аккаунта</div>
+      </div>
+
+      <!-- Переключатель -->
+      <div class="tabs" role="tablist">
+        <button class="tabs__btn is-active" role="tab" aria-selected="true" data-tab-target="panel-login">Войти</button>
+        <button class="tabs__btn" role="tab" aria-selected="false" data-tab-target="panel-register">Регистрация</button>
+      </div>
+
+      <!-- Панель: Вход -->
+      <form class="auth-form tab-panel" id="panel-login" data-tab-panel data-auth-form="login" data-redirect="cabinet.html" novalidate>
+        <div class="field">
+          <label class="field__label" for="login-email">Почта</label>
+          <input class="input" id="login-email" type="email" placeholder="Введите почту" autocomplete="email">
+        </div>
+        <div class="field">
+          <label class="field__label" for="login-pass">Пароль</label>
+          <input class="input" id="login-pass" type="password" placeholder="Введите пароль" autocomplete="current-password">
+        </div>
+        <button class="btn btn--primary btn--block" type="submit">Продолжить</button>
+        <div class="divider">или</div>
+        <button class="btn btn--outline btn--block" type="button">Войти через … …</button>
+      </form>
+
+      <!-- Панель: Регистрация -->
+      <form class="auth-form tab-panel" id="panel-register" data-tab-panel data-auth-form="register" data-redirect="cabinet.html" novalidate hidden>
+        <div class="field">
+          <label class="field__label" for="reg-email">Почта</label>
+          <input class="input" id="reg-email" type="email" placeholder="Введите почту" autocomplete="email">
+        </div>
+        <div class="field">
+          <label class="field__label" for="reg-pass">Пароль</label>
+          <input class="input" id="reg-pass" type="password" placeholder="Введите пароль" autocomplete="new-password">
+        </div>
+        <button class="btn btn--primary btn--block" type="submit">Продолжить</button>
+        <p class="auth-terms">Нажимая кнопку, вы принимаете <a href="#">Условия использования</a> и <a href="#">Политику конфиденциальности</a></p>
+      </form>
+    </div>
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/integration.js"></script>
+  <script src="js/site.js"></script>
+</body>
+</html>

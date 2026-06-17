@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Поступающие заявки — FreightHub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"></noscript>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="mod">
+    <!-- Боковое меню -->
+    <aside class="mod__sidebar" data-mod-sidebar>
+      <div class="mod__brand">
+        <a href="index.html" class="logo">Freight<b>Hub</b></a>
+      </div>
+      <nav class="mod__menu">
+        <a href="moderator.html" class="mod__menu-item is-active">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v12H5.2L4 17.5z"/></svg>
+          Поступающие заявки
+          <span class="count">5</span>
+        </a>
+      </nav>
+      <a href="index.html" class="mod__logout">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
+        Выйти
+      </a>
+    </aside>
+
+    <!-- Основная область -->
+    <div class="mod__main">
+      <div class="mod__topbar">
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="mod__burger" data-mod-burger aria-label="Меню">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <h1>Поступающие заявки</h1>
+        </div>
+        <div class="mod__topbar-right">
+          <div class="bell">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+            <span class="dot">1</span>
+          </div>
+          <div class="userchip">
+            <span class="userchip__av"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span>
+            <span><span class="userchip__name">Иван Петров</span><br><span class="userchip__role">Модератор</span></span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="mod__content">
+        <div class="mod__content-head">
+          <h2>Поступающие заявки</h2>
+          <p>Заявки ожидают проверки и публикации</p>
+        </div>
+
+        <div class="request-list">
+          <article class="request-card">
+            <div class="request-card__icon request-card__icon--cargo">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8l-9-5-9 5v8l9 5z"/><path d="M3 8l9 5 9-5"/></svg>
+            </div>
+            <div class="request-card__body">
+              <span class="badge badge--green">Груз</span>
+              <div class="request-card__title">Строительные материалы</div>
+              <div class="request-card__route"><span class="flag">DE</span> Берлин <span class="arrow">→</span> <span class="flag">FR</span> Париж</div>
+            </div>
+            <a href="moderator-detail-cargo.html" class="btn btn--outline">Просмотреть</a>
+          </article>
+
+          <article class="request-card">
+            <div class="request-card__icon request-card__icon--transport">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 17h4V5H2v12h3"/><path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h1"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
+            </div>
+            <div class="request-card__body">
+              <span class="badge badge--info">Транспорт</span>
+              <div class="request-card__title">Рефрижератор</div>
+              <div class="request-card__route"><span class="flag">DE</span> Берлин <span class="arrow">→</span> <span class="flag">FR</span> Париж</div>
+            </div>
+            <a href="moderator-detail-transport.html" class="btn btn--outline">Просмотреть</a>
+          </article>
+
+          <article class="request-card">
+            <div class="request-card__icon request-card__icon--cargo">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8l-9-5-9 5v8l9 5z"/><path d="M3 8l9 5 9-5"/></svg>
+            </div>
+            <div class="request-card__body">
+              <span class="badge badge--green">Груз</span>
+              <div class="request-card__title">Строительные материалы</div>
+              <div class="request-card__route"><span class="flag">DE</span> Берлин <span class="arrow">→</span> <span class="flag">FR</span> Париж</div>
+            </div>
+            <a href="moderator-detail-cargo.html" class="btn btn--outline">Просмотреть</a>
+          </article>
+
+          <article class="request-card">
+            <div class="request-card__icon request-card__icon--transport">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 17h4V5H2v12h3"/><path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h1"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
+            </div>
+            <div class="request-card__body">
+              <span class="badge badge--info">Транспорт</span>
+              <div class="request-card__title">Рефрижератор</div>
+              <div class="request-card__route"><span class="flag">DE</span> Берлин <span class="arrow">→</span> <span class="flag">FR</span> Париж</div>
+            </div>
+            <a href="moderator-detail-transport.html" class="btn btn--outline">Просмотреть</a>
+          </article>
+
+          <article class="request-card">
+            <div class="request-card__icon request-card__icon--cargo">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8l-9-5-9 5v8l9 5z"/><path d="M3 8l9 5 9-5"/></svg>
+            </div>
+            <div class="request-card__body">
+              <span class="badge badge--green">Груз</span>
+              <div class="request-card__title">Строительные материалы</div>
+              <div class="request-card__route"><span class="flag">DE</span> Берлин <span class="arrow">→</span> <span class="flag">FR</span> Париж</div>
+            </div>
+            <a href="moderator-detail-cargo.html" class="btn btn--outline">Просмотреть</a>
+          </article>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/integration.js"></script>
+  <script src="js/site.js"></script>
+</body>
+</html>
