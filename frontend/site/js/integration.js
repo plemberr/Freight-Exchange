@@ -95,25 +95,57 @@
 
       form.addEventListener("submit", function (e) {
         e.preventDefault();
+      
         var email = (emailEl && emailEl.value || "").trim();
         var pass = (passEl && passEl.value || "");
+      
         var emailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
         setFieldError(emailEl, emailOk ? null : "Введите корректный адрес почты");
-        var passOk = pass.length >= 8;
-        setFieldError(passEl, passOk ? null : "Пароль должен содержать минимум 8 символов");
+      
+        var isRegister = mode === "register";
+      
+        // пароль проверяем ТОЛЬКО при регистрации
+        var passOk = true;
+      
+        if (isRegister) {
+          passOk = pass.length >= 8;
+          setFieldError(
+            passEl,
+            passOk ? null : "Пароль должен содержать минимум 8 символов"
+          );
+        } else {
+          setFieldError(passEl, null); // убираем любые ошибки при login
+        }
+      
         if (!emailOk || !passOk) return;
-
-        var op = mode === "register" ? API.auth.register(email, pass) : API.auth.login(email, pass);
-        if (submitBtn) { submitBtn.disabled = true; submitBtn.dataset._t = submitBtn.textContent; submitBtn.textContent = "Подождите…"; }
+      
+        var op =
+          isRegister
+            ? API.auth.register(email, pass)
+            : API.auth.login(email, pass);
+      
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.dataset._t = submitBtn.textContent;
+          submitBtn.textContent = "Подождите…";
+        }
+      
         op.then(function () {
           window.location.href = redirect;
         }).catch(function (err) {
-          var msg = err && err.status === 401 ? "Неверная почта или пароль"
-            : err && err.status === 409 ? "Пользователь с такой почтой уже существует"
-            : (err && err.message) || "Не удалось выполнить запрос";
+          var msg =
+            err && err.status === 401
+              ? "Неверная почта или пароль"
+              : err && err.status === 409
+              ? "Пользователь с такой почтой уже существует"
+              : (err && err.message) || "Не удалось выполнить запрос";
+      
           setFieldError(passEl, msg);
         }).then(function () {
-          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitBtn.dataset._t || "Продолжить"; }
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = submitBtn.dataset._t || "Продолжить";
+          }
         });
       });
     });
