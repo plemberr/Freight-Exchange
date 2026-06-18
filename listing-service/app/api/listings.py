@@ -64,6 +64,19 @@ async def get_my_listings(
         status=status
     )
 
+# GET LISTINGS BY USER ID
+@router.get(
+    "/user/{user_id}",
+    response_model=list[ListingResponse]
+)
+async def get_user_listings(
+    user_id: str,
+    db: Session = Depends(get_db)
+):
+    return service.get_user_listings(
+        db=db,
+        user_id=user_id
+    )
 
 # GET BY ID (public according to OpenAPI)
 @router.get(

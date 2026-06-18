@@ -306,6 +306,19 @@ class ListingService:
 
         return listings
 
+    def get_user_listings(
+            self,
+            db: Session,
+            user_id: str
+    ):
+        listings = self.listing_repo.get_by_owner(db, user_id)
+
+        return [
+            listing
+            for listing in listings
+            if listing.status == ListingStatus.ACTIVE
+        ]
+
     # =========================================================
     # UPDATE
     # =========================================================

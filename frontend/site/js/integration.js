@@ -402,41 +402,41 @@
       if (document.body.dataset.page !== "moderator-detail-cargo") {
         return;
       }
-    
+
       var id = new URLSearchParams(location.search).get("id");
-    
+
       if (!id) {
         console.error("Moderation listing id not found");
         return;
       }
-    
+
       API.moderation.queue()
         .then(function (queue) {
-    
+
           var listing = queue.find(function (item) {
             return item.listingId === id;
           });
-    
+
           if (!listing) {
             console.error("Listing not found in moderation queue");
             return;
           }
-    
+
           var route = listing.route || {};
           var origin = route.origin || {};
           var dest = route.destination || {};
           var cargo = listing.cargo || {};
-    
+
           // ----------------------------
           // HEADER
           // ----------------------------
-    
+
           var title = document.querySelector(".detail-head__title");
           if (title) {
             title.textContent =
               (origin.city || "") + " → " + (dest.city || "");
           }
-    
+
           var sub = document.querySelector(".detail-head__sub");
           if (sub) {
             sub.textContent =
@@ -445,54 +445,54 @@
               " км • " +
               fmtDate(listing.createdAt);
           }
-    
+
           // ----------------------------
           // ROUTE
           // ----------------------------
-    
+
           var originCity = document.querySelector("[data-origin-city]");
           if (originCity) originCity.textContent = origin.city || "";
-    
+
           var originCountry = document.querySelector("[data-origin-country]");
           if (originCountry) {
             originCountry.textContent =
               (origin.country || "").substring(0, 2).toUpperCase();
           }
-    
+
           var destCity = document.querySelector("[data-dest-city]");
           if (destCity) destCity.textContent = dest.city || "";
-    
+
           var destCountry = document.querySelector("[data-dest-country]");
           if (destCountry) {
             destCountry.textContent =
               (dest.country || "").substring(0, 2).toUpperCase();
           }
-    
+
           var routeLine = document.querySelector("[data-route-line]");
           if (routeLine) {
             routeLine.textContent =
               Math.round(route.distanceKm || 0) + " км";
           }
-    
+
           // ----------------------------
           // CARGO
           // ----------------------------
-    
+
           var type = document.querySelector("[data-cargo-type]");
           if (type) type.textContent = cargo.cargoType || "—";
-    
+
           var weight = document.querySelector("[data-weight]");
           if (weight) {
             weight.textContent =
               cargo.weight != null ? cargo.weight + " т" : "—";
           }
-    
+
           var volume = document.querySelector("[data-volume]");
           if (volume) {
             volume.textContent =
               cargo.volume != null ? cargo.volume + " м³" : "—";
           }
-    
+
           var dims = document.querySelector("[data-dimensions]");
           if (dims) {
             dims.textContent =
@@ -500,21 +500,21 @@
               (cargo.width || "—") + " × " +
               (cargo.height || "—") + " м";
           }
-    
+
           var desc = document.querySelector("[data-description]");
           if (desc) {
             desc.textContent = listing.description || "";
           }
-    
+
           // ----------------------------
           // OWNER (пока без user-service)
           // ----------------------------
-    
+
           var owner = document.querySelector("[data-owner-company]");
           if (owner) {
             owner.textContent = "Owner ID: " + listing.ownerId;
           }
-    
+
         })
         .catch(function (err) {
           console.error(err);
