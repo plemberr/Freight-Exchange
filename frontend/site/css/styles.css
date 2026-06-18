@@ -1205,3 +1205,105 @@ p { line-height: var(--lh-base); }
   .mod__sidebar.is-open { transform: translateX(0); }
   .mod__burger { display: inline-grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--line); border-radius: var(--r-sm); background: #fff; cursor: pointer; }
 }
+
+
+.modal[hidden] {
+  display: none;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+
+.modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+}
+
+.modal__content {
+  position: relative;
+
+  width: min(500px, calc(100vw - 32px));
+
+  margin: 120px auto;
+  padding: 24px;
+
+  background: white;
+  border-radius: var(--r-lg);
+
+  box-shadow:
+    0 10px 15px -3px rgba(0,0,0,.1),
+    0 4px 6px -4px rgba(0,0,0,.1);
+}
+
+.modal__title {
+  margin-bottom: 12px;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+}
+
+.modal__reason {
+  padding: 16px;
+
+  border-radius: var(--r-md);
+
+  background: #fde8e8;
+  color: #7a271a;
+
+  line-height: 1.5;
+}
+
+.modal__actions {
+  margin-top: 20px;
+
+  display: flex;
+  justify-content: flex-end;
+}
+
+.status-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.reject-info-btn {
+  width: 24px;
+  height: 24px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border: none;
+  border-radius: 50%;
+
+  background: var(--bg-muted);
+  color: var(--text-muted);
+
+  cursor: pointer;
+}
+
+.reject-info-btn {
+  transition:
+    background-color .2s ease,
+    color .2s ease,
+    transform .15s ease;
+}
+
+.reject-info-btn:hover {
+  background: #fde8e8;
+  color: #b42318;
+}
+
+.reject-info-btn:active {
+  transform: scale(.95);
+}
+
+.reject-info-btn svg {
+  width: 10px;
+  height: 10px;
+}
