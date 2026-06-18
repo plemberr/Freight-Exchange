@@ -31,21 +31,14 @@
     </div>
   </header>
 
+  <!-- Верхняя строка поиска — поля откуда/куда убраны, они дублируют фильтры sidebar -->
   <div class="subbar">
     <div class="container subbar__row">
-      <div class="input-icon">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-        <input class="input" type="text" placeholder="Откуда">
-      </div>
-      <div class="input-icon">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-        <input class="input" type="text" placeholder="Куда">
-      </div>
-      <button class="btn btn--primary">
+      <button class="btn btn--primary" data-search-btn>
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
         Поиск
       </button>
-      <div class="subbar__count">Найдено: <b>1842 объявления</b></div>
+      <div class="subbar__count">Найдено: <b data-total-count>…</b></div>
     </div>
   </div>
 
@@ -57,12 +50,15 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg>
             Фильтры
           </span>
-          <button class="filters__reset" type="button">Сбросить</button>
+          <button class="filters__reset" type="button" data-reset-btn>Сбросить</button>
         </div>
 
         <div class="filter-group" data-search-type-select>
           <div class="filter-group__title">Для</div>
-          <select class="select"><option>Транспорт</option><option>Груз</option></select>
+          <select class="select" data-type-select>
+            <option value="TRANSPORT">Транспорт</option>
+            <option value="CARGO">Груз</option>
+          </select>
         </div>
 
         <div class="filter-group">
@@ -70,107 +66,57 @@
           <div class="filter-stack">
             <div class="input-icon">
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-              <input class="input" type="text" placeholder="Город отправления">
+              <input class="input" type="text" placeholder="Город отправления" data-filter="origin">
             </div>
             <div class="input-icon">
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-              <input class="input" type="text" placeholder="Город назначения">
+              <input class="input" type="text" placeholder="Город назначения" data-filter="destination">
             </div>
           </div>
         </div>
 
         <div class="filter-group">
-          <div class="filter-group__title">Вес, т</div>
-          <div class="range-row"><input class="input" placeholder="От"><input class="input" placeholder="До"></div>
+          <div class="filter-group__title">Вес (грузоподъёмность), кг</div>
+          <div class="range-row">
+            <input class="input" type="number" min="0" step="0.1" placeholder="От" data-filter="minMaxWeight">
+            <input class="input" type="number" min="0" step="0.1" placeholder="До" data-filter="maxMaxWeight">
+          </div>
         </div>
 
         <div class="filter-group">
-          <div class="filter-group__title">Объём, м³</div>
-          <div class="range-row"><input class="input" placeholder="От"><input class="input" placeholder="До"></div>
+          <div class="filter-group__title">Объём (макс.), м³</div>
+          <div class="range-row">
+            <input class="input" type="number" min="0" step="0.1" placeholder="От" data-filter="minMaxVolume">
+            <input class="input" type="number" min="0" step="0.1" placeholder="До" data-filter="maxMaxVolume">
+          </div>
         </div>
 
         <div class="filter-group">
           <div class="filter-group__title">Тип транспорта</div>
           <div class="checklist">
-            <label class="check"><input type="checkbox">Тентованный</label>
-            <label class="check"><input type="checkbox">Рефрижератор</label>
-            <label class="check"><input type="checkbox">Бортовой</label>
+            <label class="check"><input type="checkbox" data-transport-type="Тентованный">Тентованный</label>
+            <label class="check"><input type="checkbox" data-transport-type="Рефрижератор">Рефрижератор</label>
+            <label class="check"><input type="checkbox" data-transport-type="Бортовой">Бортовой</label>
           </div>
           <button class="filter-more" type="button">+ все типы</button>
         </div>
 
-        <button class="btn btn--primary btn--block" type="button">Применить фильтры</button>
+        <button class="btn btn--primary btn--block" type="button" data-apply-btn>Применить фильтры</button>
       </aside>
 
       <section class="results">
         <div class="results__head">
-          <div class="results__count">Показано <b>1–6</b> из 1842 объявлений</div>
+          <div class="results__count">Показано <b data-shown-count>…</b></div>
           <label class="sort">Сортировка
-            <select class="select"><option>По дате</option><option>По расстоянию</option></select>
+            <select class="select" data-sort-select>
+              <option value="date">По дате</option>
+              <option value="distance">По расстоянию</option>
+            </select>
           </label>
         </div>
 
-        <div class="result-list">
-          <article class="result-card">
-            <div class="result-card__body">
-              <div class="result-card__route"><span class="flag">DE</span> Берлин <span class="arrow">→</span> <span class="flag">FR</span> Париж</div>
-              <div class="meta"><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.5 4 7v10l8 4.5 8-4.5V7z"/><path d="M4 7l8 4.5L20 7M12 11.5V21.5"/></svg> Генеральный груз</span><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 7h12l-1 13H7z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg> 12 т</span><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 17h4V5H2v12h3"/><path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h1"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg> 45 м³</span><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg> 15 июня 2026</span><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="2.5"/></svg> 1050 км</span></div>
-            </div>
-            <div class="result-card__aside">
-              <div class="result-card__carrier">Müller Transport GmbH</div>
-              <a href="listing-detail-transport.html" class="btn btn--primary">Подробнее</a>
-            </div>
-          </article>
-          <article class="result-card">
-            <div class="result-card__body">
-              <div class="result-card__route"><span class="flag">DE</span> Берлин <span class="arrow">→</span> <span class="flag">FR</span> Париж</div>
-              <div class="meta"><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.5 4 7v10l8 4.5 8-4.5V7z"/><path d="M4 7l8 4.5L20 7M12 11.5V21.5"/></svg> Генеральный груз</span><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 7h12l-1 13H7z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg> 12 т</span><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 17h4V5H2v12h3"/><path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h1"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg> 45 м³</span><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg> 15 июня 2026</span><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="2.5"/></svg> 1050 км</span></div>
-            </div>
-            <div class="result-card__aside">
-              <div class="result-card__carrier">Müller Transport GmbH</div>
-              <a href="listing-detail-transport.html" class="btn btn--primary">Подробнее</a>
-            </div>
-          </article>
-          <article class="result-card">
-            <div class="result-card__body">
-              <div class="result-card__route"><span class="flag">DE</span> Берлин <span class="arrow">→</span> <span class="flag">FR</span> Париж</div>
-              <div class="meta"><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.5 4 7v10l8 4.5 8-4.5V7z"/><path d="M4 7l8 4.5L20 7M12 11.5V21.5"/></svg> Генеральный груз</span><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 7h12l-1 13H7z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg> 12 т</span><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 17h4V5H2v12h3"/><path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h1"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg> 45 м³</span><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg> 15 июня 2026</span><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="2.5"/></svg> 1050 км</span></div>
-            </div>
-            <div class="result-card__aside">
-              <div class="result-card__carrier">Müller Transport GmbH</div>
-              <a href="listing-detail-transport.html" class="btn btn--primary">Подробнее</a>
-            </div>
-          </article>
-          <article class="result-card">
-            <div class="result-card__body">
-              <div class="result-card__route"><span class="flag">DE</span> Берлин <span class="arrow">→</span> <span class="flag">FR</span> Париж</div>
-              <div class="meta"><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.5 4 7v10l8 4.5 8-4.5V7z"/><path d="M4 7l8 4.5L20 7M12 11.5V21.5"/></svg> Генеральный груз</span><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 7h12l-1 13H7z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg> 12 т</span><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 17h4V5H2v12h3"/><path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h1"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg> 45 м³</span><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg> 15 июня 2026</span><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="2.5"/></svg> 1050 км</span></div>
-            </div>
-            <div class="result-card__aside">
-              <div class="result-card__carrier">Müller Transport GmbH</div>
-              <a href="listing-detail-transport.html" class="btn btn--primary">Подробнее</a>
-            </div>
-          </article>
-          <article class="result-card">
-            <div class="result-card__body">
-              <div class="result-card__route"><span class="flag">DE</span> Берлин <span class="arrow">→</span> <span class="flag">FR</span> Париж</div>
-              <div class="meta"><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.5 4 7v10l8 4.5 8-4.5V7z"/><path d="M4 7l8 4.5L20 7M12 11.5V21.5"/></svg> Генеральный груз</span><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 7h12l-1 13H7z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg> 12 т</span><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 17h4V5H2v12h3"/><path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h1"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg> 45 м³</span><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg> 15 июня 2026</span><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="2.5"/></svg> 1050 км</span></div>
-            </div>
-            <div class="result-card__aside">
-              <div class="result-card__carrier">Müller Transport GmbH</div>
-              <a href="listing-detail-transport.html" class="btn btn--primary">Подробнее</a>
-            </div>
-          </article>
-          <article class="result-card">
-            <div class="result-card__body">
-              <div class="result-card__route"><span class="flag">DE</span> Берлин <span class="arrow">→</span> <span class="flag">FR</span> Париж</div>
-              <div class="meta"><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.5 4 7v10l8 4.5 8-4.5V7z"/><path d="M4 7l8 4.5L20 7M12 11.5V21.5"/></svg> Генеральный груз</span><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 7h12l-1 13H7z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg> 12 т</span><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 17h4V5H2v12h3"/><path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h1"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg> 45 м³</span><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg> 15 июня 2026</span><span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="2.5"/></svg> 1050 км</span></div>
-            </div>
-            <div class="result-card__aside">
-              <div class="result-card__carrier">Müller Transport GmbH</div>
-              <a href="listing-detail-transport.html" class="btn btn--primary">Подробнее</a>
-            </div>
-          </article>
+        <div class="result-list" data-result-list>
+          <!-- карточки вставляются динамически -->
         </div>
       </section>
     </div>

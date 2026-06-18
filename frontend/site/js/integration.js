@@ -170,72 +170,170 @@
     function wireSearch() {
       var page = document.body.dataset.page;
       if (page !== "cargo" && page !== "transport") return;
-      var listEl = document.querySelector(".result-list");
+      var listEl = document.querySelector("[data-result-list]") || document.querySelector(".result-list");
       if (!listEl) return;
 
-      var type = page === "cargo" ? "CARGO" : "TRANSPORT";
-      var subbar = document.querySelector(".subbar");
-      var originEl = subbar ? subbar.querySelectorAll(".input")[0] : null;
-      var destEl = subbar ? subbar.querySelectorAll(".input")[1] : null;
-      var searchBtn = subbar ? subbar.querySelector(".btn") : null;
-      var sortSel = document.querySelector(".results__head .select");
-      var applyBtn = document.querySelector(".filters .btn--block");
+      // Тип объявления определяется из select или из страницы
+      var typeSelect = document.querySelector("[data-type-select]");
+      function currentType() {
+        if (typeSelect && typeSelect.value) return typeSelect.value;
+        return page === "cargo" ? "CARGO" : "TRANSPORT";
+      }
+
+      // Кнопки управления
+      var searchBtn  = document.querySelector("[data-search-btn]");
+      var applyBtn   = document.querySelector("[data-apply-btn]");
+      var resetBtn   = document.querySelector("[data-reset-btn]");
+      var sortSel    = document.querySelector("[data-sort-select]") || document.querySelector(".results__head .select");
 
       listEl.innerHTML = info("Загрузка объявлений…");
 
+      // --- Сортировка ---
       function sortParams() {
         var v = sortSel ? sortSel.value : "";
-        if (v === "По цене") return { sort: "price", order: "asc" };
-        if (v === "По расстоянию") return { sort: "distanceKm", order: "asc" };
+        if (v === "price" || v === "По цене")       return { sort: "price",      order: "asc"  };
+        if (v === "distance" || v === "По расстоянию") return { sort: "distanceKm", order: "asc"  };
         return { sort: "created_at", order: "desc" };
       }
+
+      // --- Собрать все фильтры из [data-filter] инпутов ---
+      function collectFilters() {
+        var q = { type: currentType(), page: 0, size: 20 };
+        Object.assign(q, sortParams());
+
+        // Числовые и текстовые фильтры через data-filter
+        document.querySelectorAll("[data-filter]").forEach(function (el) {
+          var key = el.dataset.filter;
+          var val = el.value.trim();
+          if (val !== "") q[key] = val;
+        });
+
+        // Маппинг русских названий → enum-значения API
+        var CARGO_TYPE_MAP = {
+          "Коробка":          "BOX",
+          "Паллет":           "PALLET",
+          "Насыпной":         "BULK",
+          "Генеральный":      "GENERAL",
+          "Наливной":         "LIQUID",
+          "Негабаритный":     "OVERSIZED",
+          "Рефрижераторный":  "REFRIGERATED"
+        };
+        var TRANSPORT_TYPE_MAP = {
+          "Тентованный":  "TRUCK",
+          "Рефрижератор": "REFRIGERATED",
+          "Бортовой":     "FLATBED",
+          "Изотерм":      "ISOTHERMAL",
+          "Контейнер":    "CONTAINER",
+          "Самосвал":     "TIPPER",
+          "Автовоз":      "CAR_CARRIER"
+        };
+
+        // Чекбоксы типа груза (CARGO)
+        var checkedCargo = [];
+        document.querySelectorAll("[data-cargo-type]").forEach(function (cb) {
+          if (cb.checked) {
+            var raw = cb.dataset.cargoType;
+            checkedCargo.push(CARGO_TYPE_MAP[raw] || raw);
+          }
+        });
+        if (checkedCargo.length === 1) q.cargoType = checkedCargo[0];
+        // Если выбрано несколько или ни одного — не передаём (API принимает одно значение)
+
+        // Чекбоксы типа транспорта (TRANSPORT)
+        var checkedTransport = [];
+        document.querySelectorAll("[data-transport-type]").forEach(function (cb) {
+          if (cb.checked) {
+            var raw = cb.dataset.transportType;
+            checkedTransport.push(TRANSPORT_TYPE_MAP[raw] || raw);
+          }
+        });
+        if (checkedTransport.length === 1) q.transportType = checkedTransport[0];
+
+        return q;
+      }
+
+      // --- Выполнить поиск ---
       function run() {
-        var q = Object.assign({ type: type, page: 0, size: 20 }, sortParams());
-        if (originEl && originEl.value.trim()) q.origin = originEl.value.trim();
-        if (destEl && destEl.value.trim()) q.destination = destEl.value.trim();
+        var q = collectFilters();
         listEl.innerHTML = info("Загрузка объявлений…");
         API.search.listings(q).then(render).catch(function () {
           listEl.innerHTML = info("Не удалось загрузить объявления. Попробуйте обновить страницу.");
         });
       }
+
+      // --- Сброс фильтров ---
+      function resetFilters() {
+        document.querySelectorAll("[data-filter]").forEach(function (el) { el.value = ""; });
+        document.querySelectorAll("[data-cargo-type], [data-transport-type]").forEach(function (cb) { cb.checked = false; });
+        if (typeSelect) typeSelect.selectedIndex = 0;
+        run();
+      }
+
+      // --- Рендер результатов ---
       function render(data) {
         var items = (data && data.items) || [];
-        listEl.innerHTML = items.length ? items.map(card).join("") : info("Ничего не найдено по заданным условиям.");
+        var type = currentType();
+        listEl.innerHTML = items.length ? items.map(function (it) { return card(it, type); }).join("") : info("Ничего не найдено по заданным условиям.");
         var total = data && typeof data.total === "number" ? data.total : items.length;
+
+        var shownEl = document.querySelector("[data-shown-count]");
+        if (shownEl) shownEl.textContent = "1–" + items.length + " из " + fmtNum(total) + " объявлений";
+
         var countEl = document.querySelector(".results__count");
-        if (countEl) countEl.innerHTML = "Показано <b>1–" + items.length + "</b> из " + fmtNum(total) + " объявлений";
+        if (countEl && !shownEl) countEl.innerHTML = "Показано <b>1–" + items.length + "</b> из " + fmtNum(total) + " объявлений";
+
+        var totalEl = document.querySelector("[data-total-count]");
+        if (totalEl) totalEl.textContent = fmtNum(total);
+
         var subCount = document.querySelector(".subbar__count");
-        if (subCount) subCount.innerHTML = "Найдено: <b>" + fmtNum(total) + "</b>";
+        if (subCount && !totalEl) subCount.innerHTML = "Найдено: <b>" + fmtNum(total) + "</b>";
       }
-      function card(it) {
+
+      // --- Карточка объявления ---
+      function card(it, type) {
         var meta = [];
         if (type === "CARGO") {
           if (it.cargoType) meta.push("<span>" + esc(it.cargoType) + "</span>");
-          if (it.weight != null) meta.push("<span>" + fmtNum(it.weight) + " т</span>");
-          if (it.volume != null) meta.push("<span>" + fmtNum(it.volume) + " м³</span>");
+          if (it.weight   != null) meta.push("<span>" + fmtNum(it.weight)  + " т</span>");
+          if (it.volume   != null) meta.push("<span>" + fmtNum(it.volume)  + " м³</span>");
+          if (it.length   != null) meta.push("<span>Д " + fmtNum(it.length) + " м</span>");
+          if (it.width    != null) meta.push("<span>Ш " + fmtNum(it.width)  + " м</span>");
+          if (it.height   != null) meta.push("<span>В " + fmtNum(it.height) + " м</span>");
         } else {
           if (it.transportType) meta.push("<span>" + esc(it.transportType) + "</span>");
           if (it.maxWeight != null) meta.push("<span>до " + fmtNum(it.maxWeight) + " т</span>");
           if (it.maxVolume != null) meta.push("<span>до " + fmtNum(it.maxVolume) + " м³</span>");
         }
-        if (it.created_at) meta.push("<span>" + fmtDate(it.created_at) + "</span>");
+        var dateVal = it.createdAt || it.created_at;
+        if (dateVal) meta.push("<span>" + fmtDate(dateVal) + "</span>");
         var detail = (type === "CARGO" ? "listing-detail.html" : "listing-detail-transport.html") + "?id=" + encodeURIComponent(it.id);
         var price = (type === "CARGO" && it.price != null)
           ? '<div><div class="price">' + fmtNum(it.price) + ' €</div><div class="price__sub">за перевозку</div></div>' : "";
         return '<article class="result-card"><div class="result-card__body">'
-          + '<div class="result-card__route">' + esc(it.origin) + ' <span class="arrow">→</span> ' + esc(it.destination) + '</div>'
+          + '<div class="result-card__route">' + esc(it.origin || "") + ' <span class="arrow">→</span> ' + esc(it.destination || "") + '</div>'
           + '<div class="meta">' + meta.join("") + '</div></div>'
           + '<div class="result-card__aside">' + price
           + '<div class="result-card__carrier">' + esc(it.title || "") + '</div>'
           + '<a href="' + detail + '" class="btn btn--primary">Подробнее</a></div></article>';
       }
 
+      // --- Навесить обработчики ---
       if (searchBtn) searchBtn.addEventListener("click", function (e) { e.preventDefault(); run(); });
-      if (applyBtn) applyBtn.addEventListener("click", function (e) { e.preventDefault(); run(); });
-      if (sortSel) sortSel.addEventListener("change", run);
-      [originEl, destEl].forEach(function (el) {
-        if (el) el.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); run(); } });
+      if (applyBtn)  applyBtn.addEventListener("click",  function (e) { e.preventDefault(); run(); });
+      if (resetBtn)  resetBtn.addEventListener("click",  function (e) { e.preventDefault(); resetFilters(); });
+      if (sortSel)   sortSel.addEventListener("change", run);
+      if (typeSelect) typeSelect.addEventListener("change", function () {
+        // Перенаправить на соответствующую страницу при смене типа
+        var val = typeSelect.value;
+        if (val === "CARGO"     && page !== "cargo")     window.location.href = "search-cargo.html";
+        if (val === "TRANSPORT" && page !== "transport") window.location.href = "search-transport.html";
       });
+
+      // Enter в текстовых фильтрах
+      document.querySelectorAll("[data-filter]").forEach(function (el) {
+        el.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); run(); } });
+      });
+
       run();
     }
 
@@ -701,44 +799,44 @@
       if (document.body.dataset.page !== "moderator-detail-cargo") {
         return;
       }
-    
+
       var id = new URLSearchParams(location.search).get("id");
-    
+
       if (!id) {
         console.error("Moderation listing id not found");
         return;
       }
-    
+
       (async function () {
-    
+
         try {
-    
+
           var queue = await API.moderation.queue();
-    
+
           var listing = queue.find(function (item) {
             return item.listingId === id;
           });
-    
+
           if (!listing) {
             console.error("Listing not found in moderation queue");
             return;
           }
-    
+
           var route = listing.route || {};
           var origin = route.origin || {};
           var dest = route.destination || {};
           var cargo = listing.cargo || {};
-    
+
           // ----------------------------
           // HEADER
           // ----------------------------
-    
+
           var title = document.querySelector(".detail-head__title");
           if (title) {
             title.textContent =
               (origin.city || "") + " → " + (dest.city || "");
           }
-    
+
           var sub = document.querySelector(".detail-head__sub");
           if (sub) {
             sub.textContent =
@@ -747,29 +845,29 @@
               " км • Опубликовано " +
               fmtDate(listing.createdAt);
           }
-    
+
           // ----------------------------
           // ROUTE
           // ----------------------------
-    
+
           var originCity = document.querySelector("[data-origin-city]");
           if (originCity) originCity.textContent = origin.city || "";
-    
+
           var originCountry = document.querySelector("[data-origin-country]");
           if (originCountry) {
             originCountry.textContent =
               (origin.country || "").substring(0, 2).toUpperCase();
           }
-    
+
           var destCity = document.querySelector("[data-dest-city]");
           if (destCity) destCity.textContent = dest.city || "";
-    
+
           var destCountry = document.querySelector("[data-dest-country]");
           if (destCountry) {
             destCountry.textContent =
               (dest.country || "").substring(0, 2).toUpperCase();
           }
-    
+
           var routeLine = document.querySelector(".route-line");
           if (routeLine) {
             routeLine.innerHTML =
@@ -777,33 +875,33 @@
               Math.round(route.distanceKm || 0) +
               " км";
           }
-    
+
           // ----------------------------
           // CARGO
           // ----------------------------
-    
+
           var badge = document.querySelector(".badge");
           if (badge) {
             badge.textContent = cargo.cargoType || "Груз";
           }
-    
+
           var cargoType = document.querySelector("[data-cargo-type]");
           if (cargoType) {
             cargoType.textContent = cargo.cargoType || "—";
           }
-    
+
           var weight = document.querySelector("[data-weight]");
           if (weight) {
             weight.textContent =
               cargo.weight != null ? cargo.weight + " т" : "—";
           }
-    
+
           var volume = document.querySelector("[data-volume]");
           if (volume) {
             volume.textContent =
               cargo.volume != null ? cargo.volume + " м³" : "—";
           }
-    
+
           var dims = document.querySelector("[data-dimensions]");
           if (dims) {
             dims.textContent =
@@ -811,7 +909,7 @@
               (cargo.width || "—") + " × " +
               (cargo.height || "—") + " м";
           }
-    
+
           var desc = document.querySelector("[data-description]");
           if (desc) {
             desc.textContent = listing.description || "";
@@ -848,40 +946,40 @@
               pricePerKm.textContent = "";
             }
           }
-    
+
           // ----------------------------
           // OWNER (ВТОРОЙ ЗАПРОС)
           // ----------------------------
-    
+
           try {
-    
+
             var owner = await API.users.get(listing.ownerId);
-    
+
             var ownerName = document.querySelector("[data-owner-name]");
             var ownerEmail = document.querySelector("[data-owner-email]");
             var ownerPhone = document.querySelector("[data-owner-phone]");
-    
+
             if (ownerName) {
               ownerName.textContent = owner.name || "Не указано";
             }
-    
+
             if (ownerEmail) {
               ownerEmail.textContent = owner.email || "Не указано";
             }
-    
+
             if (ownerPhone) {
               ownerPhone.textContent = owner.phone || "Не указан";
             }
-    
+
           } catch (e) {
             console.error("Failed to load owner", e);
           }
-    
+
         } catch (err) {
           console.error(err);
           alert("Ошибка загрузки заявки");
         }
-    
+
       })();
     }
 
