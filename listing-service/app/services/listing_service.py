@@ -16,6 +16,8 @@ from app.schemas.listing import (
     CreateListingRequest,
     UpdateListingRequest
 )
+from app.schemas.cargo import CargoRequest
+from app.schemas.transport import TransportRequest
 
 from app.kafka.kafka_producer import send_event
 from app.kafka.topics import (
@@ -48,6 +50,70 @@ def _apply_partial_update(target, source_model) -> None:
         alias = fields[field_name].validation_alias
         attr_name = alias if isinstance(alias, str) else field_name
         setattr(target, attr_name, value)
+
+
+def _serialize_point(point) -> dict | None:
+    if point is None:
+        return None
+
+    return {
+        "city": point.city,
+        "country": point.country,
+        "latitude": point.latitude,
+        "longitude": point.longitude,
+    }
+
+
+def _serialize_route(route) -> dict | None:
+    if route is None:
+        return None
+
+    waypoints = sorted(route.waypoints, key=lambda wp: wp.order_index)
+
+    return {
+        "origin": _serialize_point(route.origin),
+        "destination": _serialize_point(route.destination),
+        "waypoints": [_serialize_point(wp.point) for wp in waypoints],
+        "distanceKm": route.distance_km,
+    }
+
+
+def _build_moderation_event(listing) -> dict:
+    """
+    Builds the payload for the `listing.sent_to_moderation` Kafka event.
+
+    moderation-service's ListingSentToModerationEvent (and the
+    ModerationQueueItem it gets persisted into) expects cargo/transport/
+    route alongside the basic fields. Without them the moderation queue
+    item ends up with cargo=transport=route=null - that's exactly the
+    "truncated" listing showing up in the moderation queue, since
+    moderation-service stores whatever this event carries instead of
+    fetching the listing back from listing-service.
+
+    CargoRequest/TransportRequest already know how to read the
+    camelCase fields off the snake_case ORM columns via validation_alias
+    (see app/schemas/cargo.py and app/schemas/transport.py), so they're
+    reused here instead of hand-mapping fields again. Route/waypoints
+    are mapped by hand because `route.waypoints` is a list of
+    RouteWaypoint join-rows (ordered by order_index, each wrapping a
+    Point in `.point`), not a list of Point itself.
+    """
+    return {
+        "listingId": str(listing.id),
+        "ownerId": str(listing.owner_id),
+        "title": listing.title,
+        "description": listing.description,
+        "type": listing.type.value,
+        "cargo": (
+            CargoRequest.model_validate(listing.cargo).model_dump()
+            if listing.cargo else None
+        ),
+        "transport": (
+            TransportRequest.model_validate(listing.transport).model_dump()
+            if listing.transport else None
+        ),
+        "route": _serialize_route(listing.route),
+    }
 
 
 class ListingService:
@@ -313,13 +379,7 @@ class ListingService:
         if should_resend:
             await send_event(
                 LISTING_SENT_TO_MODERATION_TOPIC,
-                {
-                    "listingId": str(listing.id),
-                    "ownerId": str(listing.owner_id),
-                    "title": listing.title,
-                    "description": listing.description,
-                    "type": listing.type.value,
-                }
+                _build_moderation_event(listing)
             )
 
         return listing
@@ -342,13 +402,7 @@ class ListingService:
 
         await send_event(
             LISTING_SENT_TO_MODERATION_TOPIC,
-            {
-                "listingId": str(listing.id),
-                "ownerId": str(listing.owner_id),
-                "title": listing.title,
-                "description": listing.description,
-                "type": listing.type.value,
-            }
+            _build_moderation_event(listing)
         )
 
         return listing
