@@ -14,6 +14,7 @@
       wireSearch();          // search-cargo / search-transport
       wireCabinet();         // cabinet.html — мои объявления
       wireModerationQueue(); // moderator.html — очередь
+      wireModeratorProfile();
       wireLogout();
       wireLoginButton();
       wireWizardMap();       // карта + геокодинг на страницах создания объявления
@@ -352,6 +353,47 @@
           + '<a href="' + detail + '" class="btn btn--outline">Просмотреть</a>'
           + '</article>';
       }
+    }
+
+    // ============================================================
+    // MODERATOR PROFILE
+    // ============================================================
+    function wireModeratorProfile() {
+
+      if (!location.pathname.includes("moderator")) {
+        return;
+      }
+
+      if (!API.tokens.isAuthed) {
+        return;
+      }
+
+      API.users.me()
+        .then(function(user) {
+
+          var nameElement =
+            document.querySelector(".userchip__name");
+
+          if (nameElement) {
+            nameElement.textContent =
+              user.name ||
+              user.email ||
+              "Модератор";
+          }
+
+          var roleElement =
+            document.querySelector(".userchip__role");
+
+          if (roleElement) {
+            roleElement.textContent = "Модератор";
+          }
+        })
+        .catch(function(err) {
+          console.error(
+            "Failed to load moderator profile",
+            err
+          );
+        });
     }
 
     // ============================================================
