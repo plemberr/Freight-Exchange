@@ -36,7 +36,6 @@
         <!-- Модератор -->
         <div class="mod__topbar-right">
           <div class="userchip">
-            <span class="userchip__av">👤</span>
             <span>
               <span class="userchip__name" data-moderator-name>...</span><br>
               <span class="userchip__role">Модератор</span>
@@ -55,7 +54,7 @@
             <!-- HEADER -->
             <div class="card">
               <div class="detail-head__top">
-                <span class="badge badge--green" data-cargo-type>—</span>
+                <span class="badge badge--green" data-cargo-type-badge>—</span>
               </div>
 
               <h2 class="detail-head__title" data-route-title>—</h2>
@@ -67,17 +66,13 @@
                 <div class="route-point">
                   <div class="route-point__country" data-origin-country>—</div>
                   <div class="route-point__city" data-origin-city>—</div>
-                  <div class="route-point__place" data-origin-place></div>
-                  <div class="route-point__date"></div>
                 </div>
 
-                <div class="route-line" data-route-line>—</div>
+                <div class="route-line">Прямой рейс<span class="dash"></span>0 км</div>
 
                 <div class="route-point route-point--to">
                   <div class="route-point__country" data-dest-country>—</div>
                   <div class="route-point__city" data-dest-city>—</div>
-                  <div class="route-point__place" data-dest-place></div>
-                  <div class="route-point__date"></div>
                 </div>
 
               </div>
@@ -92,7 +87,7 @@
                 <div class="param">
                   <div>
                     <div class="param__label">Тип</div>
-                    <div class="param__value" data-cargo-type-text>—</div>
+                    <div class="param__value" data-cargo-type>—</div>
                   </div>
                 </div>
 
@@ -139,17 +134,21 @@
           <!-- SIDEBAR -->
           <aside>
             <div class="side-card">
-
-              <div class="side-card__company" data-owner-company>—</div>
-
+              <div class="side-card__price" data-cargo-price>—</div>
+              <div class="side-card__perkm" data-price-per-km></div>
+              <div class="side-card__company" data-owner-name>—</div>
               <div class="side-contacts">
-                <span data-owner-email>—</span>
-                <span data-owner-phone>—</span>
+                <span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+                  <span data-owner-email>—</span>
+                </span>
+                <span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>
+                  <span data-owner-phone>—</span>
+                </span>
               </div>
-
             </div>
           </aside>
-
         </div>
       </div>
     </div>
