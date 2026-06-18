@@ -22,7 +22,7 @@
       wireSettings();
       wireEditTransport();
       wireEditCargo();
-
+      wireTransportDetail();
       wireListingTypeSelector();
     });
     // ещё раз после полной загрузки — перебить возможный показ ссылки из site.js
@@ -1320,6 +1320,155 @@
           };
         }
       });
+    }
+
+    // ============================================================
+    // DETAIL TRANSPORT PAGE
+    // ============================================================
+    function wireTransportDetail() {
+
+      if (document.body.dataset.page !== "transport-detail") {
+        return;
+      }
+
+      var id = new URLSearchParams(location.search).get("id");
+
+      if (!id) {
+        console.error("Listing id not found");
+        return;
+      }
+
+      API.listings.get(id)
+        .then(function (listing) {
+
+          if (!listing) {
+            return;
+          }
+
+          var transport = listing.transport || {};
+          var route = listing.route || {};
+          var origin = route.origin || {};
+          var destination = route.destination || {};
+
+          // -----------------------------------
+          // Заголовок
+          // -----------------------------------
+
+          var title = document.querySelector(".detail-head__title");
+
+          if (title) {
+            title.innerHTML =
+              esc(origin.city || "") +
+              ' <span style="color:var(--green-700)">→</span> ' +
+              esc(destination.city || "");
+          }
+
+          // -----------------------------------
+          // Подзаголовок
+          // -----------------------------------
+
+          var sub = document.querySelector(".detail-head__sub");
+
+          if (sub) {
+            sub.textContent =
+              "Расстояние: " +
+              Math.round(route.distance_km || 0) +
+              " км • Опубликовано " +
+              fmtDate(listing.created_at);
+          }
+
+          // -----------------------------------
+          // Маршрут
+          // -----------------------------------
+
+          var countries = document.querySelectorAll(".route-point__country");
+
+          if (countries.length >= 2) {
+            countries[0].textContent =
+              (origin.country || "").substring(0, 2).toUpperCase();
+
+            countries[1].textContent =
+              (destination.country || "").substring(0, 2).toUpperCase();
+          }
+
+          var cities = document.querySelectorAll(".route-point__city");
+
+          if (cities.length >= 2) {
+            cities[0].textContent = origin.city || "";
+            cities[1].textContent = destination.city || "";
+          }
+
+          var places = document.querySelectorAll(".route-point__place");
+
+          if (places.length >= 2) {
+            places[0].textContent = origin.country || "";
+            places[1].textContent = destination.country || "";
+          }
+
+          var routeLine = document.querySelector(".route-line");
+
+          if (routeLine) {
+            routeLine.innerHTML =
+              'Прямой рейс<span class="dash"></span>' +
+              Math.round(route.distance_km || 0) +
+              " км";
+          }
+
+          // -----------------------------------
+          // Параметры транспорта
+          // -----------------------------------
+
+          var transportType = document.querySelector("[data-transport-type]");
+          var maxWeight = document.querySelector("[data-max-weight]");
+          var maxVolume = document.querySelector("[data-max-volume]");
+
+          if (transportType) {
+            transportType.textContent =
+              transport.transportType || "—";
+          }
+
+          if (maxWeight) {
+            maxWeight.textContent =
+              transport.maxWeight != null
+                ? transport.maxWeight + " т"
+                : "—";
+          }
+
+          if (maxVolume) {
+            maxVolume.textContent =
+              transport.maxVolume != null
+                ? transport.maxVolume + " м³"
+                : "—";
+          }
+
+          // -----------------------------------
+          // Описание
+          // -----------------------------------
+
+          var desc = document.querySelector(".desc-text");
+
+          if (desc) {
+            desc.textContent = listing.description || "";
+          }
+
+          // -----------------------------------
+          // Breadcrumb
+          // -----------------------------------
+
+          var breadcrumb = document.querySelector(".breadcrumb");
+
+          if (breadcrumb) {
+            breadcrumb.innerHTML =
+              '<a href="search-transport.html">‹ Назад к списку</a> / ' +
+              esc(origin.city || "") +
+              " → " +
+              esc(destination.city || "");
+          }
+        })
+        .catch(function (err) {
+          console.error(err);
+          alert("Не удалось загрузить объявление");
+        });
     }
 
     // ============================================================

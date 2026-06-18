@@ -10,7 +10,7 @@
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"></noscript>
   <link rel="stylesheet" href="css/styles.css">
 </head>
-<body data-page="transport" data-login="solid">
+<body data-page="transport-detail" data-login="solid">
   <header class="header">
     <div class="container header__inner">
       <a href="index.html" class="logo">Freight<b>Hub</b></a>
@@ -58,38 +58,54 @@
             <div class="route-point">
               <div class="route-point__country">DE</div>
               <div class="route-point__city">Берлин</div>
-              <div class="route-point__place">логистический терминал Tempelhof</div>
-              <div class="route-point__date">14 июня 2026, 08:00</div>
             </div>
             <div class="route-line">Прямой рейс<span class="dash"></span>1050 км</div>
             <div class="route-point route-point--to">
               <div class="route-point__country">FR</div>
               <div class="route-point__city">Париж</div>
-              <div class="route-point__place">склад La Défense</div>
-              <div class="route-point__date">15 июня 2026</div>
             </div>
           </div>
         </div>
 
         <div class="card">
-          <h2 class="wizard-card__title">Параметры груза</h2>
+          <h2 class="wizard-card__title">Параметры транспорта</h2>
           <div class="params-grid">
+
             <div class="param">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.5 4 7v10l8 4.5 8-4.5V7z"/><path d="M4 7l8 4.5L20 7M12 11.5V21.5"/></svg>
-              <div><div class="param__label">Тип груза</div><div class="param__value">Генеральный груз</div></div>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2.5 4 7v10l8 4.5 8-4.5V7z"/>
+                <path d="M4 7l8 4.5L20 7M12 11.5V21.5"/>
+              </svg>
+              <div>
+                <div class="param__label">Тип транспорта</div>
+                <div class="param__value" data-transport-type></div>
+              </div>
             </div>
+          
             <div class="param">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 7h12l-1 13H7z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg>
-              <div><div class="param__label">Вес</div><div class="param__value">12 т</div></div>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 7h12l-1 13H7z"/>
+                <path d="M9 7V5a3 3 0 0 1 6 0v2"/>
+              </svg>
+              <div>
+                <div class="param__label">Максимальный вес</div>
+                <div class="param__value" data-max-weight></div>
+              </div>
             </div>
+          
             <div class="param">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="6.5" rx="6" ry="2.5"/><path d="M6 6.5v11c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5v-11"/></svg>
-              <div><div class="param__label">Габариты</div><div class="param__value">13.6 × 2.4 × 2.7 м</div></div>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10 17h4V5H2v12h3"/>
+                <path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h1"/>
+                <circle cx="7.5" cy="17.5" r="2.5"/>
+                <circle cx="17.5" cy="17.5" r="2.5"/>
+              </svg>
+              <div>
+                <div class="param__label">Максимальный объём</div>
+                <div class="param__value" data-max-volume></div>
+              </div>
             </div>
-            <div class="param">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 17h4V5H2v12h3"/><path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h1"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
-              <div><div class="param__label">Объём</div><div class="param__value">45 м³</div></div>
-            </div>
+          
           </div>
         </div>
 
