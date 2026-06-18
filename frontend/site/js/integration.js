@@ -23,6 +23,7 @@
       wireEditTransport();
       wireEditCargo();
       wireTransportDetail();
+      wireCargoDetail();
       wireListingTypeSelector();
       wireSearchTypeSelector();
       wireCreateListingButton();
@@ -1340,8 +1341,11 @@
         return;
       }
 
-      API.listings.get(id)
-        .then(function (listing) {
+      (async function () {
+
+        try {
+
+          var listing = await API.listings.get(id);
 
           if (!listing) {
             return;
@@ -1351,6 +1355,37 @@
           var route = listing.route || {};
           var origin = route.origin || {};
           var destination = route.destination || {};
+
+          // ===================================
+          // OWNER
+          // ===================================
+
+          try {
+
+            var owner = await API.users.get(listing.owner_id);
+
+            var ownerName = document.querySelector("[data-owner-name]");
+            var ownerEmail = document.querySelector("[data-owner-email]");
+            var ownerPhone = document.querySelector("[data-owner-phone]");
+
+            if (ownerName) {
+              ownerName.textContent =
+                owner.name || "Не указано";
+            }
+
+            if (ownerEmail) {
+              ownerEmail.textContent =
+                owner.email || "Не указано";
+            }
+
+            if (ownerPhone) {
+              ownerPhone.textContent =
+                owner.phone || "Не указан";
+            }
+
+          } catch (e) {
+            console.error("Failed to load owner", e);
+          }
 
           // -----------------------------------
           // Заголовок
@@ -1424,11 +1459,10 @@
           var maxWeight = document.querySelector("[data-max-weight]");
           var maxVolume = document.querySelector("[data-max-volume]");
 
-          if (transportTypes) {
-            transportTypes.forEach(function (element) {
-              element.textContent = transport.transportType || "—";
-            });
-          }
+          transportTypes.forEach(function (element) {
+            element.textContent =
+              transport.transportType || "—";
+          });
 
           if (maxWeight) {
             maxWeight.textContent =
@@ -1451,7 +1485,8 @@
           var desc = document.querySelector(".desc-text");
 
           if (desc) {
-            desc.textContent = listing.description || "";
+            desc.textContent =
+              listing.description || "";
           }
 
           // -----------------------------------
@@ -1467,11 +1502,246 @@
               " → " +
               esc(destination.city || "");
           }
-        })
-        .catch(function (err) {
+
+        } catch (err) {
           console.error(err);
           alert("Не удалось загрузить объявление");
-        });
+        }
+
+      })();
+    }
+
+    // ============================================================
+    // DETAIL CARGO PAGE
+    // ============================================================
+    function wireCargoDetail() {
+
+      if (document.body.dataset.page !== "cargo") {
+        return;
+      }
+
+      var id = new URLSearchParams(location.search).get("id");
+
+      if (!id) {
+        console.error("Listing id not found");
+        return;
+      }
+
+      (async function () {
+
+        try {
+
+          var listing = await API.listings.get(id);
+
+          if (!listing) {
+            return;
+          }
+
+          var cargo = listing.cargo || {};
+          var route = listing.route || {};
+          var origin = route.origin || {};
+          var destination = route.destination || {};
+
+          // ===================================
+          // OWNER
+          // ===================================
+
+          try {
+
+            var owner = await API.users.get(listing.owner_id);
+
+            var ownerName = document.querySelector("[data-owner-name]");
+            var ownerEmail = document.querySelector("[data-owner-email]");
+            var ownerPhone = document.querySelector("[data-owner-phone]");
+
+            if (ownerName) {
+              ownerName.textContent = owner.name || "Не указано";
+            }
+
+            if (ownerEmail) {
+              ownerEmail.textContent = owner.email || "Не указано";
+            }
+
+            if (ownerPhone) {
+              ownerPhone.textContent = owner.phone || "Не указан";
+            }
+
+          } catch (e) {
+            console.error("Failed to load owner", e);
+          }
+
+          // ===================================
+          // HEADER
+          // ===================================
+
+          var title = document.querySelector(".detail-head__title");
+
+          if (title) {
+            title.innerHTML =
+              esc(origin.city || "") +
+              ' <span style="color:var(--green-700)">→</span> ' +
+              esc(destination.city || "");
+          }
+
+          var subtitle = document.querySelector(".detail-head__sub");
+
+          if (subtitle) {
+            subtitle.textContent =
+              "Расстояние: " +
+              Math.round(route.distance_km || 0) +
+              " км • Опубликовано " +
+              fmtDate(listing.created_at);
+          }
+
+          // ===================================
+          // BADGE
+          // ===================================
+
+          var badge = document.querySelector(".badge");
+
+          if (badge) {
+            badge.textContent = cargo.cargoType || "Груз";
+          }
+
+          // ===================================
+          // ROUTE
+          // ===================================
+
+          var countries = document.querySelectorAll(".route-point__country");
+
+          if (countries.length >= 2) {
+            countries[0].textContent =
+              (origin.country || "").substring(0, 2).toUpperCase();
+
+            countries[1].textContent =
+              (destination.country || "").substring(0, 2).toUpperCase();
+          }
+
+          var cities = document.querySelectorAll(".route-point__city");
+
+          if (cities.length >= 2) {
+            cities[0].textContent = origin.city || "";
+            cities[1].textContent = destination.city || "";
+          }
+
+          var places = document.querySelectorAll(".route-point__place");
+
+          if (places.length >= 2) {
+            places[0].textContent = origin.country || "";
+            places[1].textContent = destination.country || "";
+          }
+
+          var routeLine = document.querySelector(".route-line");
+
+          if (routeLine) {
+            routeLine.innerHTML =
+              'Прямой рейс<span class="dash"></span>' +
+              Math.round(route.distance_km || 0) +
+              " км";
+          }
+
+          // ===================================
+          // CARGO
+          // ===================================
+
+          var cargoType = document.querySelector("[data-cargo-type]");
+          var cargoWeight = document.querySelector("[data-cargo-weight]");
+          var cargoDimensions = document.querySelector("[data-cargo-dimensions]");
+          var cargoVolume = document.querySelector("[data-cargo-volume]");
+
+          if (cargoType) {
+            cargoType.textContent = cargo.cargoType || "—";
+          }
+
+          if (cargoWeight) {
+            cargoWeight.textContent =
+              cargo.weight != null
+                ? cargo.weight + " кг"
+                : "—";
+          }
+
+          if (cargoDimensions) {
+            cargoDimensions.textContent =
+              (cargo.length || 0) +
+              " × " +
+              (cargo.width || 0) +
+              " × " +
+              (cargo.height || 0) +
+              " м";
+          }
+
+          if (cargoVolume) {
+            cargoVolume.textContent =
+              cargo.volume != null
+                ? cargo.volume + " м³"
+                : "—";
+          }
+
+          // ===================================
+          // PRICE
+          // ===================================
+
+          var price = document.querySelector("[data-cargo-price]");
+          var pricePerKm = document.querySelector("[data-price-per-km]");
+
+          if (price) {
+            price.textContent =
+              cargo.price != null
+                ? cargo.price + " €"
+                : "Цена не указана";
+          }
+
+          if (pricePerKm) {
+
+            if (
+              cargo.price != null &&
+              route.distance_km
+            ) {
+
+              pricePerKm.textContent =
+                "= " +
+                (cargo.price / route.distance_km).toFixed(2) +
+                " €/км";
+
+            } else {
+
+              pricePerKm.textContent = "";
+            }
+          }
+
+          // ===================================
+          // DESCRIPTION
+          // ===================================
+
+          var desc = document.querySelector(".desc-text");
+
+          if (desc) {
+            desc.textContent =
+              listing.description || "";
+          }
+
+          // ===================================
+          // BREADCRUMB
+          // ===================================
+
+          var breadcrumb = document.querySelector(".breadcrumb");
+
+          if (breadcrumb) {
+            breadcrumb.innerHTML =
+              '<a href="search-cargo.html">‹ Назад к списку</a> / ' +
+              esc(origin.city || "") +
+              " → " +
+              esc(destination.city || "");
+          }
+
+        } catch (err) {
+
+          console.error(err);
+          alert("Не удалось загрузить объявление");
+
+        }
+
+      })();
     }
 
     // ============================================================
