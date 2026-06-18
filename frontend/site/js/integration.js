@@ -1373,4 +1373,30 @@
       if (value === "груз") window.location.href = "create-cargo.html";
     });
   }
+
+  function wireSearchTypeSwitch() {
+      const select = document.querySelector(".filter-group select");
+      if (!select) return;
+
+      // 1. Установить значение из URL
+      const params = new URLSearchParams(window.location.search);
+      const type = params.get("type");
+
+      if (type === "CARGO") select.value = "Груз";
+      if (type === "TRANSPORT") select.value = "Транспорт";
+
+      // 2. Переключение страницы при изменении
+      select.addEventListener("change", () => {
+        const value = select.value;
+
+        const newUrl =
+          value === "Груз"
+            ? "search-cargo.html?type=CARGO"
+            : "search-transport.html?type=TRANSPORT";
+
+        window.location.href = newUrl;
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", wireSearchTypeSwitch);
 })();
