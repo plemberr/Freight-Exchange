@@ -1430,7 +1430,7 @@
           if (maxWeight) {
             maxWeight.textContent =
               transport.maxWeight != null
-                ? transport.maxWeight + " т"
+                ? transport.maxWeight + " кг"
                 : "—";
           }
 
