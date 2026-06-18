@@ -15,6 +15,9 @@
       wireCabinet();         // cabinet.html — мои объявления
       wireModerationQueue(); // moderator.html — очередь
       wireModeratorProfile();
+      wireModeratorActions();
+      wireModeratorDetailCargo();
+      wireModeratorDetailTransport();
       wireLogout();
       wireLoginButton();
       wireWizardMap();       // карта + геокодинг на страницах создания объявления
@@ -28,8 +31,6 @@
       wireListingTypeSelector();
       wireSearchTypeSelector();
       wireCreateListingButton();
-      wireModeratorDetailCargo();
-      wireModeratorDetailTransport();
     });
     // ещё раз после полной загрузки — перебить возможный показ ссылки из site.js
     window.addEventListener("load", wireModeratorLink);
@@ -285,11 +286,11 @@
         var typeWeight, price;
         if (isCargo) {
           var c = it.cargo || {};
-          typeWeight = esc(c.cargoType || "Груз") + (c.weight != null ? "<br>" + fmtNum(c.weight) + " т" : "");
+          typeWeight = esc(c.cargoType || "Груз") + (c.weight != null ? "<br>" + fmtNum(c.weight) + " кг" : "");
           price = c.price != null ? fmtNum(c.price) + " €" : "—";
         } else {
           var t = it.transport || {};
-          typeWeight = esc(t.transportType || "Транспорт") + (t.maxWeight != null ? "<br>до " + fmtNum(t.maxWeight) + " т" : "");
+          typeWeight = esc(t.transportType || "Транспорт") + (t.maxWeight != null ? "<br>до " + fmtNum(t.maxWeight) + " кг" : "");
           price = "—";
         }
         var detail = (isCargo ? "listing-detail.html" : "listing-detail-transport.html") + "?id=" + encodeURIComponent(it.id);
@@ -396,6 +397,98 @@
             err
           );
         });
+    }
+
+    // ============================================================
+    // MODERATION ACTIONS
+    // ============================================================
+    function wireModeratorActions() {
+
+      var page = document.body.dataset.page;
+
+      if (
+        page !== "moderator-detail-cargo" &&
+        page !== "moderator-detail-transport"
+      ) {
+        return;
+      }
+
+      var id = new URLSearchParams(location.search).get("id");
+
+      if (!id) {
+        return;
+      }
+
+      var approveBtn = document.querySelector("[data-approve]");
+      var rejectBtn = document.querySelector("[data-reject]");
+      var reasonField = document.querySelector("[data-reject-reason]");
+
+      // ----------------------------
+      // APPROVE
+      // ----------------------------
+
+      if (approveBtn) {
+
+        approveBtn.addEventListener("click", async function () {
+
+          try {
+
+            approveBtn.disabled = true;
+
+            await API.moderation.approve(id);
+
+            alert("Объявление успешно одобрено");
+
+            window.location.href = "moderator.html";
+
+          } catch (err) {
+
+            console.error(err);
+            alert("Не удалось одобрить объявление");
+
+            approveBtn.disabled = false;
+          }
+        });
+      }
+
+      // ----------------------------
+      // REJECT
+      // ----------------------------
+
+      if (rejectBtn) {
+
+        rejectBtn.addEventListener("click", async function () {
+
+          var reason = "";
+
+          if (reasonField) {
+            reason = reasonField.value.trim();
+          }
+
+          if (!reason) {
+            alert("Укажите причину отклонения");
+            return;
+          }
+
+          try {
+
+            rejectBtn.disabled = true;
+
+            await API.moderation.reject(id, reason);
+
+            alert("Объявление отклонено");
+
+            window.location.href = "moderator.html";
+
+          } catch (err) {
+
+            console.error(err);
+            alert("Не удалось отклонить объявление");
+
+            rejectBtn.disabled = false;
+          }
+        });
+      }
     }
 
     // ============================================================
