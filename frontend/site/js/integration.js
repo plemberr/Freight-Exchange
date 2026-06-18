@@ -1419,13 +1419,14 @@
           // Параметры транспорта
           // -----------------------------------
 
-          var transportType = document.querySelector("[data-transport-type]");
+          var transportTypes = document.querySelectorAll("[data-transport-type]");
           var maxWeight = document.querySelector("[data-max-weight]");
           var maxVolume = document.querySelector("[data-max-volume]");
 
-          if (transportType) {
-            transportType.textContent =
-              transport.transportType || "—";
+          if (transportTypes) {
+            transportTypes.forEach(function (element) {
+              element.textContent = transport.transportType || "—";
+            });
           }
 
           if (maxWeight) {
