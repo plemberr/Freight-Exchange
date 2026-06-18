@@ -25,6 +25,7 @@
       wireTransportDetail();
       wireListingTypeSelector();
       wireSearchTypeSelector();
+      wireCreateListingButton();
     });
     // ещё раз после полной загрузки — перебить возможный показ ссылки из site.js
     window.addEventListener("load", wireModeratorLink);
@@ -1511,5 +1512,23 @@
           window.location.href = "search-cargo.html";
         }
       });
+    }
+
+    // ============================================================
+    // КНОПКА "РАЗМЕСТИТЬ ОБЪЯВЛЕНИЕ"
+    // ============================================================
+    function wireCreateListingButton() {
+        var btn = document.querySelector("[data-create-listing-btn]");
+        if (!btn) return;
+
+        btn.addEventListener("click", function (e) {
+            e.preventDefault();
+
+            if (API.tokens.isAuthed) {
+                window.location.href = "create-cargo.html";
+            } else {
+                window.location.href = "auth.html";
+            }
+        });
     }
   })();
