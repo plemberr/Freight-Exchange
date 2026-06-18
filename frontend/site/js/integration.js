@@ -31,6 +31,7 @@
       wireListingTypeSelector();
       wireSearchTypeSelector();
       wireCreateListingButton();
+      wireProfilePage();
     });
     // ещё раз после полной загрузки — перебить возможный показ ссылки из site.js
     window.addEventListener("load", wireModeratorLink);
@@ -1886,36 +1887,40 @@
           var origin = route.origin || {};
           var destination = route.destination || {};
 
-          // ===================================
-          // OWNER
-          // ===================================
+            // ===================================
+            // OWNER
+            // ===================================
 
-          try {
+            try {
 
-            var owner = await API.users.get(listing.owner_id);
+              var owner = await API.users.get(listing.owner_id);
 
-            var ownerName = document.querySelector("[data-owner-name]");
-            var ownerEmail = document.querySelector("[data-owner-email]");
-            var ownerPhone = document.querySelector("[data-owner-phone]");
+              var ownerName = document.querySelector("[data-owner-name]");
+              var ownerEmail = document.querySelector("[data-owner-email]");
+              var ownerPhone = document.querySelector("[data-owner-phone]");
+              var profileLink = document.querySelector("[data-profile-link]");
 
-            if (ownerName) {
-              ownerName.textContent =
-                owner.name || "Не указано";
+              if (ownerName) {
+                ownerName.textContent = owner.name || "Не указано";
+              }
+
+              if (ownerEmail) {
+                ownerEmail.textContent = owner.email || "Не указано";
+              }
+
+              if (ownerPhone) {
+                ownerPhone.textContent = owner.phone || "Не указан";
+              }
+
+              if (profileLink) {
+                profileLink.href =
+                  "profile.html?userId=" +
+                  encodeURIComponent(listing.owner_id);
+              }
+
+            } catch (e) {
+              console.error("Failed to load owner", e);
             }
-
-            if (ownerEmail) {
-              ownerEmail.textContent =
-                owner.email || "Не указано";
-            }
-
-            if (ownerPhone) {
-              ownerPhone.textContent =
-                owner.phone || "Не указан";
-            }
-
-          } catch (e) {
-            console.error("Failed to load owner", e);
-          }
 
           // -----------------------------------
           // Заголовок
@@ -2072,33 +2077,40 @@
           var origin = route.origin || {};
           var destination = route.destination || {};
 
-          // ===================================
-          // OWNER
-          // ===================================
+            // ===================================
+            // OWNER
+            // ===================================
 
-          try {
+            try {
 
-            var owner = await API.users.get(listing.owner_id);
+              var owner = await API.users.get(listing.owner_id);
 
-            var ownerName = document.querySelector("[data-owner-name]");
-            var ownerEmail = document.querySelector("[data-owner-email]");
-            var ownerPhone = document.querySelector("[data-owner-phone]");
+              var ownerName = document.querySelector("[data-owner-name]");
+              var ownerEmail = document.querySelector("[data-owner-email]");
+              var ownerPhone = document.querySelector("[data-owner-phone]");
+              var profileLink = document.querySelector("[data-profile-link]");
 
-            if (ownerName) {
-              ownerName.textContent = owner.name || "Не указано";
+              if (ownerName) {
+                ownerName.textContent = owner.name || "Не указано";
+              }
+
+              if (ownerEmail) {
+                ownerEmail.textContent = owner.email || "Не указано";
+              }
+
+              if (ownerPhone) {
+                ownerPhone.textContent = owner.phone || "Не указан";
+              }
+
+              if (profileLink) {
+                profileLink.href =
+                  "profile.html?userId=" +
+                  encodeURIComponent(listing.owner_id);
+              }
+
+            } catch (e) {
+              console.error("Failed to load owner", e);
             }
-
-            if (ownerEmail) {
-              ownerEmail.textContent = owner.email || "Не указано";
-            }
-
-            if (ownerPhone) {
-              ownerPhone.textContent = owner.phone || "Не указан";
-            }
-
-          } catch (e) {
-            console.error("Failed to load owner", e);
-          }
 
           // ===================================
           // HEADER
@@ -2331,4 +2343,108 @@
             }
         });
     }
+
+    // ============================================================
+    // СТРАНИЦА "ПРОФИЛЬ"
+    // ============================================================
+
+    function wireProfilePage() {
+
+          if (!document.querySelector(".profile-card")) return;
+
+          var userId = new URLSearchParams(location.search).get("userId");
+
+          var request;
+
+          // -------------------------
+          // 1. выбираем API
+          // -------------------------
+          if (userId) {
+            request = API.users.get(userId);
+          } else {
+            request = API.users.me();
+          }
+
+          request.then(function (user) {
+
+            var name = user.name || user.email.split("@")[0];
+
+            var nameEl = document.querySelector(".profile-card__name");
+            var mailEl = document.querySelector(".profile-card__email");
+            var avatar = document.querySelector(".avatar");
+
+            if (nameEl) nameEl.textContent = name;
+            if (mailEl) mailEl.textContent = user.email;
+            if (avatar) avatar.textContent = (name[0] || "U").toUpperCase();
+
+            var phoneEl = document.querySelector(".contact-card__row:nth-child(1)");
+            if (phoneEl && user.phone) {
+              phoneEl.childNodes[phoneEl.childNodes.length - 1].textContent =
+                " " + user.phone;
+            }
+
+            // дальше можно загрузить объявления
+            loadUserListings(userId || user.id);
+
+          }).catch(function (err) {
+            console.error("Failed to load profile:", err);
+          });
+
+          function loadUserListings(uid) {
+
+            var tbody = document.querySelector(".ad-table tbody");
+            if (!tbody) return;
+
+            tbody.innerHTML = '<tr><td colspan="5">Загрузка…</td></tr>';
+
+            API.listings.byUser(uid)   // <-- ВАЖНО: этот эндпоинт нужен
+              .then(function (items) {
+
+                if (!items || !items.length) {
+                  tbody.innerHTML =
+                    '<tr><td colspan="5">Нет объявлений</td></tr>';
+                  return;
+                }
+
+                tbody.innerHTML = items.map(rowHtml).join("");
+              })
+              .catch(function () {
+                tbody.innerHTML =
+                  '<tr><td colspan="5">Ошибка загрузки</td></tr>';
+              });
+          }
+
+          function rowHtml(it) {
+
+            var isCargo = it.type === "CARGO";
+
+            var typeWeight;
+
+            if (isCargo) {
+              typeWeight =
+                (it.cargo?.cargoType || "Груз") +
+                "<br>" +
+                (it.cargo?.weight || 0) + " кг";
+            } else {
+              typeWeight =
+                (it.transport?.transportType || "Транспорт") +
+                "<br>до " +
+                (it.transport?.maxWeight || 0) + " кг";
+            }
+
+            var detail = isCargo
+              ? "listing-detail.html?id=" + it.id
+              : "listing-detail-transport.html?id=" + it.id;
+
+            return `
+              <tr>
+                <td>${it.route?.origin?.city || ""} → ${it.route?.destination?.city || ""}</td>
+                <td>${typeWeight}</td>
+                <td>${it.price || "—"}</td>
+                <td>${it.created_at || ""}</td>
+                <td><a class="btn btn--primary" href="${detail}">Подробнее</a></td>
+              </tr>
+            `;
+          }
+        }
   })();
