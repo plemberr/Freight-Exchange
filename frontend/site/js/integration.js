@@ -341,14 +341,20 @@
     // КАБИНЕТ — мои объявления (GET /api/v1/listings/, Bearer)
     // ============================================================
     function wireCabinet() {
+
       var menu = document.querySelector("[data-account-menu]");
       var table = document.querySelector(".ad-table");
+
       if (!menu || !table) return;
 
-      if (!API.tokens.isAuthed) { window.location.replace("auth.html"); return; }
+      if (!API.tokens.isAuthed) {
+        window.location.replace("auth.html");
+        return;
+      }
 
       API.users.me()
         .then(function (user) {
+
           var email = user.email;
           var name = user.name || email.split("@")[0];
 
@@ -365,58 +371,234 @@
         });
 
       var tbody = table.querySelector("tbody");
+
       function load() {
-        tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;color:var(--text-muted)">Загрузка…</td></tr>';
-        API.listings.mine().then(function (items) {
-          items = items || [];
-          if (!items.length) {
-            tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;color:var(--text-muted)">У вас пока нет объявлений.</td></tr>';
-            return;
-          }
-          tbody.innerHTML = items.map(rowHtml).join("");
-        }).catch(function (err) {
-          var m = err && err.status === 401 ? "Сессия истекла — войдите снова." : "Не удалось загрузить объявления.";
-          tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;color:var(--text-muted)">' + esc(m) + '</td></tr>';
-        });
+
+        tbody.innerHTML =
+          '<tr><td colspan="5" style="padding:24px;color:var(--text-muted)">Загрузка…</td></tr>';
+
+        API.listings.mine()
+          .then(function (items) {
+
+            items = items || [];
+
+            if (!items.length) {
+
+              tbody.innerHTML =
+                '<tr><td colspan="5" style="padding:24px;color:var(--text-muted)">У вас пока нет объявлений.</td></tr>';
+
+              return;
+            }
+
+            tbody.innerHTML = items.map(rowHtml).join("");
+          })
+          .catch(function (err) {
+
+            var m =
+              err && err.status === 401
+                ? "Сессия истекла — войдите снова."
+                : "Не удалось загрузить объявления.";
+
+            tbody.innerHTML =
+              '<tr><td colspan="5" style="padding:24px;color:var(--text-muted)">'
+              + esc(m)
+              + '</td></tr>';
+          });
       }
+
       function rowHtml(it) {
+
         var isCargo = it.type === "CARGO";
-        var st = LISTING_STATUS[it.status] || [it.status || "", "status--draft"];
-        var typeWeight, price;
+
+        var st =
+          LISTING_STATUS[it.status] ||
+          [it.status || "", "status--draft"];
+
+        var typeWeight;
+        var price;
+
         if (isCargo) {
+
           var c = it.cargo || {};
-          typeWeight = esc(c.cargoType || "Груз") + (c.weight != null ? "<br>" + fmtNum(c.weight) + " кг" : "");
-          price = c.price != null ? fmtNum(c.price) + " €" : "—";
+
+          typeWeight =
+            esc(c.cargoType || "Груз") +
+            (c.weight != null
+              ? "<br>" + fmtNum(c.weight) + " кг"
+              : "");
+
+          price =
+            c.price != null
+              ? fmtNum(c.price) + " €"
+              : "—";
+
         } else {
+
           var t = it.transport || {};
-          typeWeight = esc(t.transportType || "Транспорт") + (t.maxWeight != null ? "<br>до " + fmtNum(t.maxWeight) + " кг" : "");
+
+          typeWeight =
+            esc(t.transportType || "Транспорт") +
+            (t.maxWeight != null
+              ? "<br>до " + fmtNum(t.maxWeight) + " кг"
+              : "");
+
           price = "—";
         }
-        var detail = (isCargo ? "listing-detail.html" : "listing-detail-transport.html") + "?id=" + encodeURIComponent(it.id);
-        var edit = (isCargo ? "edit-cargo.html" : "edit-transport.html") + "?id=" + encodeURIComponent(it.id);
-        var eye = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
-        var pen = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
-        var bin = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>';
-        return '<tr>'
-          + '<td><div class="ad-route">' + routeText(it.route) + '</div><span class="status ' + st[1] + '">' + esc(st[0]) + '</span></td>'
-          + '<td>' + typeWeight + '</td>'
-          + '<td class="ad-price">' + price + '</td>'
-          + '<td>' + fmtDate(it.created_at) + '</td>'
-          + '<td class="td-actions">'
-          + '<a href="' + detail + '" class="icon-btn" aria-label="Просмотр">' + eye + '</a>'
-          + '<a href="' + edit + '" class="icon-btn" aria-label="Редактировать">' + pen + '</a>'
-          + '<button class="icon-btn icon-btn--danger" data-del-id="' + esc(it.id) + '" aria-label="Удалить">' + bin + '</button>'
-          + '</td></tr>';
+
+        var detail =
+          (isCargo
+            ? "listing-detail.html"
+            : "listing-detail-transport.html")
+          + "?id="
+          + encodeURIComponent(it.id);
+
+        var edit =
+          (isCargo
+            ? "edit-cargo.html"
+            : "edit-transport.html")
+          + "?id="
+          + encodeURIComponent(it.id);
+
+        var eye =
+          '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+
+        var pen =
+          '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+
+        var bin =
+          '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>';
+
+        var rejectInfo = "";
+
+        if (
+          it.status === "REJECTED" &&
+          it.moderation_comment
+        ) {
+
+          rejectInfo =
+            ' <button class="reject-info-btn" ' +
+            'data-reason="' + esc(it.moderation_comment) + '" ' +
+            'title="Причина отклонения">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+            '<circle cx="12" cy="12" r="10"/>' +
+            '<path d="M12 16v-4"/>' +
+            '<path d="M12 8h.01"/>' +
+            '</svg>' +
+            '</button>';
+        }
+
+        return (
+          '<tr>' +
+        
+            '<td>' +
+              '<div class="ad-route">' +
+                routeText(it.route) +
+              '</div>' +
+        
+              '<div class="status-row">' +
+                '<span class="status ' + st[1] + '">' +
+                  esc(st[0]) +
+                '</span>' +
+        
+                rejectInfo +
+              '</div>' +
+            '</td>' +
+        
+            '<td>' +
+              typeWeight +
+            '</td>' +
+        
+            '<td class="ad-price">' +
+              price +
+            '</td>' +
+        
+            '<td>' +
+              fmtDate(it.created_at) +
+            '</td>' +
+        
+            '<td class="td-actions">' +
+        
+              '<a href="' +
+                detail +
+                '" class="icon-btn" aria-label="Просмотр">' +
+                eye +
+              '</a>' +
+        
+              '<a href="' +
+                edit +
+                '" class="icon-btn" aria-label="Редактировать">' +
+                pen +
+              '</a>' +
+        
+              '<button class="icon-btn icon-btn--danger" data-del-id="' +
+                esc(it.id) +
+                '" aria-label="Удалить">' +
+                bin +
+              '</button>' +
+        
+            '</td>' +
+        
+          '</tr>'
+        );
       }
 
       tbody.addEventListener("click", function (e) {
+
+        var infoBtn = e.target.closest(".reject-info-btn");
+
+        if (infoBtn) {
+
+          var modal =
+            document.querySelector("[data-reject-modal]");
+
+          var text =
+            document.querySelector("[data-reject-modal-text]");
+
+          if (modal && text) {
+
+            text.textContent =
+              infoBtn.getAttribute("data-reason");
+
+            modal.hidden = false;
+          }
+
+          return;
+        }
+
         var del = e.target.closest("[data-del-id]");
+
         if (!del) return;
-        if (!window.confirm("Удалить объявление?")) return;
+
+        if (!window.confirm("Удалить объявление?")) {
+          return;
+        }
+
         del.disabled = true;
-        API.listings.remove(del.getAttribute("data-del-id")).then(load).catch(function () {
-          del.disabled = false; alert("Не удалось удалить объявление.");
-        });
+
+        API.listings.remove(del.getAttribute("data-del-id"))
+          .then(load)
+          .catch(function () {
+
+            del.disabled = false;
+
+            alert("Не удалось удалить объявление.");
+          });
+      });
+
+      document.addEventListener("click", function (e) {
+
+        if (
+          e.target.matches("[data-close-reject-modal]") ||
+          e.target.matches(".modal__backdrop")
+        ) {
+
+          var modal =
+            document.querySelector("[data-reject-modal]");
+
+          if (modal) {
+            modal.hidden = true;
+          }
+        }
       });
 
       load();
@@ -2149,7 +2331,7 @@
     // ============================================================
     function wireCargoDetail() {
 
-      if (document.body.dataset.page !== "cargo") {
+      if (document.body.dataset.page !== "cargoDetail") {
         return;
       }
 
@@ -2448,7 +2630,7 @@
 
     function wireProfilePage() {
 
-          if (!document.querySelector(".profile-card")) return;
+          if (!document.querySelector(".profile-card2")) return;
 
           var userId = new URLSearchParams(location.search).get("userId");
 
@@ -2468,12 +2650,16 @@
             var name = user.name || user.email.split("@")[0];
 
             var nameEl = document.querySelector(".profile-card__name");
-            var mailEl = document.querySelector(".profile-card__email");
+            var mailEls = document.querySelectorAll(".profile-card__email");
             var avatar = document.querySelector(".avatar");
 
             if (nameEl) nameEl.textContent = name;
-            if (mailEl) mailEl.textContent = user.email;
             if (avatar) avatar.textContent = (name[0] || "U").toUpperCase();
+
+            mailEls.forEach(function (element) {
+              element.textContent =
+                user.email;
+            });
 
             var phoneEl = document.querySelector(".contact-card__row:nth-child(1)");
             if (phoneEl && user.phone) {
@@ -2493,14 +2679,14 @@
             var tbody = document.querySelector(".ad-table tbody");
             if (!tbody) return;
 
-            tbody.innerHTML = '<tr><td colspan="5">Загрузка…</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;color:var(--text-muted)">Загрузка…</td></tr>';
 
             API.listings.byUser(uid)   // <-- ВАЖНО: этот эндпоинт нужен
               .then(function (items) {
 
                 if (!items || !items.length) {
                   tbody.innerHTML =
-                    '<tr><td colspan="5">Нет объявлений</td></tr>';
+                    '<tr><td colspan="5" style="padding:24px;color:var(--text-muted)">Нет объявлений</td></tr>';
                   return;
                 }
 
@@ -2517,17 +2703,24 @@
             var isCargo = it.type === "CARGO";
 
             var typeWeight;
+            var price;
 
             if (isCargo) {
               typeWeight =
                 (it.cargo?.cargoType || "Груз") +
                 "<br>" +
                 (it.cargo?.weight || 0) + " кг";
+              price =
+                it.cargo?.price != null
+                  ? fmtNum(it.cargo?.price) + " €"
+                  : "—";
             } else {
               typeWeight =
                 (it.transport?.transportType || "Транспорт") +
                 "<br>до " +
                 (it.transport?.maxWeight || 0) + " кг";
+                
+                price = "—";
             }
 
             var detail = isCargo
@@ -2536,11 +2729,36 @@
 
             return `
               <tr>
-                <td>${it.route?.origin?.city || ""} → ${it.route?.destination?.city || ""}</td>
-                <td>${typeWeight}</td>
-                <td>${it.price || "—"}</td>
-                <td>${it.created_at || ""}</td>
-                <td><a class="btn btn--primary" href="${detail}">Подробнее</a></td>
+            
+                <td>
+                  <div class="ad-route">
+                    ${it.route?.origin?.city || ""}
+                    <span class="arrow">↗</span>
+                    ${it.route?.destination?.city || ""}
+                  </div>
+                </td>
+            
+                <td>
+                  ${typeWeight}
+                </td>
+            
+                <td class="ad-price">
+                  ${price}
+                </td>
+            
+                <td>
+                  ${fmtDate(it.created_at)}
+                </td>
+            
+                <td class="td-actions">
+                  <a
+                    href="${detail}"
+                    class="btn btn--primary"
+                  >
+                    Подробнее
+                  </a>
+                </td>
+            
               </tr>
             `;
           }

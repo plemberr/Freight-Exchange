@@ -262,7 +262,10 @@ window.FreightAPI = (function () {
         request("/listings/" + encodeURIComponent(id) + "/send-to-moderation", {
           method: "POST",
           auth: true
-        })
+        }),
+
+      byUser: (id) =>
+        request("/listings/user/" + encodeURIComponent(id), { auth: true })
     },
 
     // -------------------------
