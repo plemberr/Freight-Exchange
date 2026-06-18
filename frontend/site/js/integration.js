@@ -7,7 +7,7 @@
     "use strict";
     if (!window.FreightAPI) return;
     var API = window.FreightAPI;
-  
+
     document.addEventListener("DOMContentLoaded", function () {
       wireModeratorLink();   // на всех страницах: показать «Модерация» по роли из токена
       wireAuth();            // auth.html
@@ -22,12 +22,12 @@
       wireSettings();
       wireEditTransport();
       wireEditCargo();
-  
+
       wireListingTypeSelector();
     });
     // ещё раз после полной загрузки — перебить возможный показ ссылки из site.js
     window.addEventListener("load", wireModeratorLink);
-  
+
     // ---------------- helpers ----------------
     function esc(s) {
       return String(s == null ? "" : s)
@@ -63,7 +63,7 @@
       if (!a && !b) return "—";
       return esc(a) + ' <span class="arrow">→</span> ' + esc(b);
     }
-  
+
     var LISTING_STATUS = {
       ACTIVE: ["Активно", "status--active"],
       MODERATION: ["На модерации", "status--moderation"],
@@ -71,7 +71,7 @@
       ARCHIVED: ["В архиве", "status--done"],
       REJECTED: ["Отклонено", "status--rejected"]
     };
-  
+
     // ============================================================
     // РОЛЬ: показать пункт «Модерация» только модератору/админу
     // ============================================================
@@ -85,7 +85,7 @@
       } catch (e) {}
       links.forEach(function (el) { el.hidden = !isMod; });
     }
-  
+
     // ============================================================
     // АВТОРИЗАЦИЯ
     // ============================================================
@@ -98,20 +98,20 @@
         var passEl = form.querySelector('input[type="password"]');
         var submitBtn = form.querySelector('button[type="submit"]');
         var redirect = form.getAttribute("data-redirect") || "cabinet.html";
-  
+
         form.addEventListener("submit", function (e) {
           e.preventDefault();
-  
+
           var email = (emailEl && emailEl.value || "").trim();
           var pass = (passEl && passEl.value || "");
-  
+
           var emailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
           setFieldError(emailEl, emailOk ? null : "Введите корректный адрес почты");
-  
+
           var isRegister = mode === "register";
-  
+
           var passOk = true;
-  
+
           if (isRegister) {
             passOk = pass.length >= 8;
             setFieldError(
@@ -121,20 +121,20 @@
           } else {
             setFieldError(passEl, null);
           }
-  
+
           if (!emailOk || !passOk) return;
-  
+
           var op =
             isRegister
               ? API.auth.register(email, pass)
               : API.auth.login(email, pass);
-  
+
           if (submitBtn) {
             submitBtn.disabled = true;
             submitBtn.dataset._t = submitBtn.textContent;
             submitBtn.textContent = "Подождите…";
           }
-  
+
           op.then(function () {
             window.location.href = redirect;
           }).catch(function (err) {
@@ -144,7 +144,7 @@
                 : err && err.status === 409
                 ? "Пользователь с такой почтой уже существует"
                 : (err && err.message) || "Не удалось выполнить запрос";
-  
+
             setFieldError(passEl, msg);
           }).then(function () {
             if (submitBtn) {
@@ -155,7 +155,7 @@
         });
       });
     }
-  
+
     // ============================================================
     // ПОИСК
     // ============================================================
@@ -164,7 +164,7 @@
       if (page !== "cargo" && page !== "transport") return;
       var listEl = document.querySelector(".result-list");
       if (!listEl) return;
-  
+
       var type = page === "cargo" ? "CARGO" : "TRANSPORT";
       var subbar = document.querySelector(".subbar");
       var originEl = subbar ? subbar.querySelectorAll(".input")[0] : null;
@@ -172,9 +172,9 @@
       var searchBtn = subbar ? subbar.querySelector(".btn") : null;
       var sortSel = document.querySelector(".results__head .select");
       var applyBtn = document.querySelector(".filters .btn--block");
-  
+
       listEl.innerHTML = info("Загрузка объявлений…");
-  
+
       function sortParams() {
         var v = sortSel ? sortSel.value : "";
         if (v === "По цене") return { sort: "price", order: "asc" };
@@ -221,7 +221,7 @@
           + '<div class="result-card__carrier">' + esc(it.title || "") + '</div>'
           + '<a href="' + detail + '" class="btn btn--primary">Подробнее</a></div></article>';
       }
-  
+
       if (searchBtn) searchBtn.addEventListener("click", function (e) { e.preventDefault(); run(); });
       if (applyBtn) applyBtn.addEventListener("click", function (e) { e.preventDefault(); run(); });
       if (sortSel) sortSel.addEventListener("change", run);
@@ -230,7 +230,7 @@
       });
       run();
     }
-  
+
     // ============================================================
     // КАБИНЕТ — мои объявления (GET /api/v1/listings/, Bearer)
     // ============================================================
@@ -238,18 +238,18 @@
       var menu = document.querySelector("[data-account-menu]");
       var table = document.querySelector(".ad-table");
       if (!menu || !table) return;
-  
+
       if (!API.tokens.isAuthed) { window.location.replace("auth.html"); return; }
-  
+
       API.users.me()
         .then(function (user) {
           var email = user.email;
           var name = user.name || email.split("@")[0];
-  
+
           var nameEl = document.querySelector(".profile-card__name");
           var mailEl = document.querySelector(".profile-card__email");
           var avatar = document.querySelector(".avatar");
-  
+
           if (nameEl) nameEl.textContent = name;
           if (mailEl) mailEl.textContent = email;
           if (avatar) avatar.textContent = (name[0] || "U").toUpperCase();
@@ -257,7 +257,7 @@
         .catch(function (err) {
           console.error("Не удалось загрузить профиль:", err);
         });
-  
+
       var tbody = table.querySelector("tbody");
       function load() {
         tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;color:var(--text-muted)">Загрузка…</td></tr>';
@@ -302,7 +302,7 @@
           + '<button class="icon-btn icon-btn--danger" data-del-id="' + esc(it.id) + '" aria-label="Удалить">' + bin + '</button>'
           + '</td></tr>';
       }
-  
+
       tbody.addEventListener("click", function (e) {
         var del = e.target.closest("[data-del-id]");
         if (!del) return;
@@ -312,10 +312,10 @@
           del.disabled = false; alert("Не удалось удалить объявление.");
         });
       });
-  
+
       load();
     }
-  
+
     // ============================================================
     // ОЧЕРЕДЬ МОДЕРАЦИИ (GET /api/v1/moderation/queue, Bearer)
     // ============================================================
@@ -323,7 +323,7 @@
       var listEl = document.querySelector(".request-list");
       if (!listEl) return;
       if (!API.tokens.isAuthed) { window.location.replace("auth.html"); return; }
-  
+
       listEl.innerHTML = info("Загрузка очереди…");
       API.moderation.queue().then(function (items) {
         items = items || [];
@@ -332,7 +332,7 @@
         var m = err && err.status === 401 ? "Недостаточно прав или сессия истекла." : "Не удалось загрузить очередь.";
         listEl.innerHTML = info(m);
       });
-  
+
       function card(it) {
         var isCargo = (it.type || "").toUpperCase() === "CARGO";
         var icon = isCargo
@@ -350,7 +350,7 @@
           + '</article>';
       }
     }
-  
+
     // ============================================================
     // ВЫХОД
     // ============================================================
@@ -362,35 +362,35 @@
         });
       });
     }
-  
+
     // ============================================================
     // КНОПКА ВОЙТИ / ВЫЙТИ В ШАПКЕ
     // ============================================================
     function wireLoginButton() {
       console.log("wireLoginButton called");
-  
+
       var btn = document.querySelector("[data-login-btn]");
       if (!btn) return;
-  
+
       var actions = btn.parentElement;
       var authed = API.tokens.isAuthed;
       console.log("isAuthed =", authed);
-  
+
       var oldProfile = document.querySelector("[data-profile-btn]");
       if (oldProfile) oldProfile.remove();
-  
+
       if (authed) {
         var profileBtn = document.createElement("a");
         profileBtn.href = "cabinet.html";
         profileBtn.className = "btn btn--outline";
         profileBtn.setAttribute("data-profile-btn", "");
         profileBtn.textContent = "Профиль";
-  
+
         actions.insertBefore(profileBtn, btn);
-  
+
         btn.innerHTML = 'Выйти <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path></svg>';
         btn.removeAttribute("href");
-  
+
         btn.onclick = function (e) {
           e.preventDefault();
           API.auth.logout().then(function () {
@@ -402,11 +402,11 @@
         btn.setAttribute("href", "auth.html");
       }
     }
-  
+
     // ============================================================
     // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ СБОРА ДАННЫХ ИЗ ВИЗАРДА
     // ============================================================
-  
+
     // Маппинг русских названий из <select> → enum-значения бэка
     var CARGO_TYPE_MAP = {
       "Генеральный": "GENERAL",
@@ -414,45 +414,45 @@
       "Наливной": "LIQUID",
       "Выбрать": null
     };
-  
+
     var TRANSPORT_TYPE_MAP = {
       "Тентованный": "TENTED",
       "Рефрижератор": "REFRIGERATED",
       "Бортовой": "FLATBED",
       "Выбрать": null
     };
-  
+
     function toCargoTypeEnum(ruLabel) {
       return CARGO_TYPE_MAP[ruLabel] || ruLabel || null;
     }
-  
+
     function toTransportTypeEnum(ruLabel) {
       return TRANSPORT_TYPE_MAP[ruLabel] || ruLabel || null;
     }
-  
+
     function getVal(stepIndex, inputIndex) {
       var step = document.querySelectorAll("[data-wizard-step]")[stepIndex];
       if (!step) return null;
       var inputs = step.querySelectorAll("input, select, textarea");
       return (inputs[inputIndex] && inputs[inputIndex].value && inputs[inputIndex].value.trim()) || null;
     }
-  
+
     function getSelect(stepIndex, index) {
       var step = document.querySelectorAll("[data-wizard-step]")[stepIndex];
       if (!step) return null;
       var sel = step.querySelectorAll("select")[index];
       return sel ? sel.value : null;
     }
-  
+
     function getTextarea() {
       var ta = document.querySelector("textarea");
       return ta ? (ta.value || "").trim() : "";
     }
-  
+
     // ============================================================
     // КАРТА И ГЕОКОДИНГ
     // ============================================================
-  
+
     // Состояние карты — хранит текущие координаты и объекты Leaflet
     var mapState = {
       map: null,
@@ -462,7 +462,7 @@
       origin: null,     // { latitude, longitude, city, country }
       destination: null // { latitude, longitude, city, country }
     };
-  
+
     // Иконки для маркеров
     function makeIcon(color) {
       return window.L && L.divIcon({
@@ -472,30 +472,30 @@
         iconAnchor: [7, 7]
       });
     }
-  
+
     // Инициализирует карту Leaflet внутри .map-box__area
     function initMap() {
       if (!window.L) return;
       var container = document.querySelector(".map-box__area");
       if (!container) return;
-  
+
       // Убираем заглушку, ставим нормальный контейнер
       container.innerHTML = '<div id="wizard-map" style="width:100%;height:100%;border-radius:inherit"></div>';
-  
+
       mapState.map = L.map("wizard-map", { zoomControl: true }).setView([51.0, 10.0], 5);
-  
+
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         maxZoom: 18
       }).addTo(mapState.map);
     }
-  
+
     // Обновляет маркер на карте
     function setMarker(role, lat, lon, label) {
       if (!mapState.map) return;
       var color = role === "origin" ? "#2563eb" : "#dc2626";
       var icon = makeIcon(color);
-  
+
       if (role === "origin") {
         if (mapState.originMarker) mapState.originMarker.remove();
         mapState.originMarker = L.marker([lat, lon], { icon: icon })
@@ -508,7 +508,7 @@
           .bindPopup(label || "Назначение");
       }
     }
-  
+
     // Подгоняет карту под видимые маркеры
     function fitMapBounds() {
       if (!mapState.map) return;
@@ -518,27 +518,27 @@
       if (points.length === 1)  mapState.map.setView(points[0], 10);
       if (points.length === 2)  mapState.map.fitBounds(points, { padding: [40, 40] });
     }
-  
+
     // Рисует маршрут по polyline из /routes/calculate
     // ORS возвращает encoded polyline (строка), декодируем через L.Polyline.fromEncoded если доступен,
     // иначе через нашу встроенную функцию
     function drawRoute(polyline) {
       if (!mapState.map || !polyline) return;
       if (mapState.routeLayer) { mapState.routeLayer.remove(); mapState.routeLayer = null; }
-  
+
       var latlngs = decodePolyline(polyline);
       if (!latlngs || !latlngs.length) return;
-  
+
       mapState.routeLayer = L.polyline(latlngs, {
         color: "#2563eb",
         weight: 4,
         opacity: 0.75,
         lineJoin: "round"
       }).addTo(mapState.map);
-  
+
       mapState.map.fitBounds(mapState.routeLayer.getBounds(), { padding: [40, 40] });
     }
-  
+
     // Стандартный Google/ORS encoded polyline decoder
     function decodePolyline(encoded) {
       var result = [];
@@ -554,7 +554,7 @@
       }
       return result;
     }
-  
+
     // Запрашивает маршрут у бэка и рисует его на карте
     async function updateMapRoute() {
       if (!mapState.origin || !mapState.destination) return;
@@ -564,10 +564,10 @@
           destination: { latitude: mapState.destination.latitude, longitude: mapState.destination.longitude },
           waypoints:   []
         });
-  
+
         if (routeData && routeData.polyline) {
           drawRoute(routeData.polyline);
-  
+
           // Показываем расстояние и время в шапке карты
           var head = document.querySelector(".map-box__head");
           if (head && routeData.distanceKm) {
@@ -580,7 +580,7 @@
         console.warn("Route calculate failed:", e);
       }
     }
-  
+
     // Геокодирует адресную строку → возвращает первый результат или null
     // Принимает полную строку: «Берлин, Германия» или «ул. Мясницкая 20, Москва»
     async function geocodeAddress(query) {
@@ -603,18 +603,18 @@
       }
       return null;
     }
-  
+
     // Показывает autocomplete-подсказки под input-ом
     function showSuggestions(input, results, onSelect) {
       // Удаляем старый список
       var old = input.parentNode.querySelector(".geocode-suggestions");
       if (old) old.remove();
       if (!results || !results.length) return;
-  
+
       var list = document.createElement("ul");
       list.className = "geocode-suggestions";
       list.style.cssText = "position:absolute;z-index:9999;background:#fff;border:1px solid var(--border,#e2e8f0);border-radius:8px;padding:4px 0;list-style:none;margin:0;width:100%;max-height:180px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.12);top:calc(100% + 4px);left:0";
-  
+
       results.slice(0, 5).forEach(function (r) {
         var li = document.createElement("li");
         li.textContent = r.displayName || (r.city ? r.city + ", " + r.country : "");
@@ -628,12 +628,12 @@
         });
         list.appendChild(li);
       });
-  
+
       // Позиционируем относительно input-icon обёртки
       var wrap = input.closest(".input-icon") || input.parentNode;
       wrap.style.position = "relative";
       wrap.appendChild(list);
-  
+
       // Закрываем при blur
       function onBlur() {
         setTimeout(function () { if (list.parentNode) list.remove(); }, 150);
@@ -641,19 +641,19 @@
       }
       input.addEventListener("blur", onBlur);
     }
-  
+
     // Подвешивает geocode-автодополнение на один input
     // role: "origin" или "destination"
     // onResolved(coords) — колбэк когда координаты определены
     function attachGeocodeInput(input, role, onResolved) {
       if (!input) return;
       var debounceTimer = null;
-  
+
       input.addEventListener("input", function () {
         clearTimeout(debounceTimer);
         var q = input.value.trim();
         if (q.length < 2) return;
-  
+
         debounceTimer = setTimeout(async function () {
           try {
             var results = await API.routes.geocode(q);
@@ -672,20 +672,20 @@
         }, 350);
       });
     }
-  
+
     // Главная функция — инициализирует карту и вешает геокодинг на поля шага 1
     function wireWizardMap() {
       // Только на страницах создания объявления
       var page = document.body.dataset.page;
       if (page !== "cargo" && page !== "transport") return;
-  
+
       // Загружаем Leaflet CSS и JS, потом инициализируем
       if (!window.L) {
         var cssLink = document.createElement("link");
         cssLink.rel = "stylesheet";
         cssLink.href = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css";
         document.head.appendChild(cssLink);
-  
+
         var script = document.createElement("script");
         script.src = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js";
         script.onload = function () { setupMapAndGeocoding(); };
@@ -694,18 +694,18 @@
         setupMapAndGeocoding();
       }
     }
-  
+
     function setupMapAndGeocoding() {
       initMap();
-  
+
       // Поля шага 1 в порядке: страна_откуда, город_откуда, адрес_погрузки, страна_куда, город_куда, адрес_разгрузки
       var step0 = document.querySelectorAll("[data-wizard-step]")[0];
       if (!step0) return;
-  
+
       var allInputs = step0.querySelectorAll("input");
       // [0] страна откуда, [1] город откуда, [2] адрес погрузки
       // [3] страна куда,   [4] город куда,   [5] адрес разгрузки
-  
+
       // Когда выбран пункт отправления — ставим маркер и обновляем маршрут
       function onOriginResolved(coords) {
         mapState.origin = coords;
@@ -713,7 +713,7 @@
         fitMapBounds();
         updateMapRoute();
       }
-  
+
       // Когда выбран пункт назначения
       function onDestResolved(coords) {
         mapState.destination = coords;
@@ -721,42 +721,42 @@
         fitMapBounds();
         updateMapRoute();
       }
-  
+
       // Вешаем автодополнение:
       // Приоритет точности: если заполнен «точный адрес» — геокодируем его,
       // если нет — геокодируем «город + страна»
       // Для простоты: автодополнение на поле «город» и поле «точный адрес»
-  
+
       // Поле города отправления
       attachGeocodeInput(allInputs[1], "origin", function (coords) {
         // Если страна не заполнена — подставляем из результата
         if (allInputs[0] && !allInputs[0].value && coords.country) allInputs[0].value = coords.country;
         onOriginResolved(coords);
       });
-  
+
       // Поле точного адреса погрузки — более точный геокодинг, перезаписывает координаты
       attachGeocodeInput(allInputs[2], "origin", onOriginResolved);
-  
+
       // Поле города назначения
       attachGeocodeInput(allInputs[4], "destination", function (coords) {
         if (allInputs[3] && !allInputs[3].value && coords.country) allInputs[3].value = coords.country;
         onDestResolved(coords);
       });
-  
+
       // Поле точного адреса разгрузки
       attachGeocodeInput(allInputs[5], "destination", onDestResolved);
     }
-  
+
     // Собирает route из mapState (координаты уже есть) + читает текстовые поля
     async function buildRoute() {
       var step0 = document.querySelectorAll("[data-wizard-step]")[0];
       var inputs = step0 ? step0.querySelectorAll("input") : [];
-  
+
       var originCountry = (inputs[0] && inputs[0].value) || (mapState.origin && mapState.origin.country) || "";
       var originCity    = (inputs[1] && inputs[1].value) || (mapState.origin && mapState.origin.city)    || "";
       var destCountry   = (inputs[3] && inputs[3].value) || (mapState.destination && mapState.destination.country) || "";
       var destCity      = (inputs[4] && inputs[4].value) || (mapState.destination && mapState.destination.city)    || "";
-  
+
       // Если координаты ещё не получены через autocomplete — геокодируем прямо сейчас
       if (!mapState.origin || !mapState.origin.latitude) {
         var query = [inputs[2] && inputs[2].value, originCity, originCountry].filter(Boolean).join(", ");
@@ -766,7 +766,7 @@
         var query2 = [inputs[5] && inputs[5].value, destCity, destCountry].filter(Boolean).join(", ");
         mapState.destination = await geocodeAddress(query2) || { latitude: 0, longitude: 0, city: destCity, country: destCountry };
       }
-  
+
       return {
         origin: {
           country:   originCountry,
@@ -783,14 +783,14 @@
         waypoints: []
       };
     }
-  
+
     // Строит человекочитаемый title из маршрута
     function buildTitle(originCity, originCountry, destCity, destCountry) {
       var from = originCity || originCountry || "?";
       var to   = destCity   || destCountry   || "?";
       return from + " — " + to;
     }
-  
+
     async function buildCargoPayload() {
       var step0 = document.querySelectorAll("[data-wizard-step]")[0];
       var inputs0 = step0 ? step0.querySelectorAll("input") : [];
@@ -798,9 +798,9 @@
       var originCountry = (inputs0[0] && inputs0[0].value) || "";
       var destCity      = (inputs0[4] && inputs0[4].value) || "";
       var destCountry   = (inputs0[3] && inputs0[3].value) || "";
-  
+
       var route = await buildRoute();
-  
+
       return {
         type: "CARGO",
         title: buildTitle(originCity, originCountry, destCity, destCountry),
@@ -817,7 +817,7 @@
         }
       };
     }
-  
+
     async function buildTransportPayload() {
       var step0 = document.querySelectorAll("[data-wizard-step]")[0];
       var inputs0 = step0 ? step0.querySelectorAll("input") : [];
@@ -825,9 +825,9 @@
       var originCountry = (inputs0[0] && inputs0[0].value) || "";
       var destCity      = (inputs0[4] && inputs0[4].value) || "";
       var destCountry   = (inputs0[3] && inputs0[3].value) || "";
-  
+
       var route = await buildRoute();
-  
+
       return {
         type: "TRANSPORT",
         title: buildTitle(originCity, originCountry, destCity, destCountry),
@@ -840,21 +840,21 @@
         }
       };
     }
-  
+
     function setButtonLoading(btn, loading, defaultText, loadingText) {
       if (!btn) return;
       btn.disabled = loading;
       btn.textContent = loading ? (loadingText || "Сохранение…") : defaultText;
     }
-  
+
     // ============================================================
     // СОЗДАНИЕ ГРУЗА
     // ============================================================
     function wireCreateCargo() {
       console.log("wireCreateCargo init");
-  
+
       if (document.body.dataset.page !== "cargo") return;
-  
+
       // --- Кнопка «Опубликовать» ---
       var publishBtn = document.getElementById("publishBtn");
       if (publishBtn) {
@@ -863,18 +863,18 @@
           setButtonLoading(publishBtn, true, "Опубликовать объявление");
           var payload = await buildCargoPayload();
           console.log("PAYLOAD:", payload);
-  
+
           setButtonLoading(publishBtn, true, "Опубликовать объявление");
           try {
             var res = await API.listings.create(payload);
             console.log("CREATED:", res);
-  
+
             // Отправляем на модерацию
             if (res && res.id) {
               await API.listings.sendToModeration(res.id);
               console.log("SENT TO MODERATION:", res.id);
             }
-  
+
             window.location.href = "cabinet.html";
           } catch (e) {
             console.error("CREATE/MODERATION ERROR:", e);
@@ -883,7 +883,7 @@
           }
         });
       }
-  
+
       // --- Кнопка «Сохранить черновик» ---
       // Ищем ссылку с текстом «Сохранить черновик» в блоке .publish__actions
       var draftLink = findDraftButton();
@@ -892,14 +892,14 @@
         draftLink.addEventListener("click", async function (e) {
           e.preventDefault();
           console.log("CLICK save draft cargo");
-  
+
           var origText = draftLink.textContent;
           draftLink.textContent = "Сохранение…";
           draftLink.style.pointerEvents = "none";
-  
+
           var payload = await buildCargoPayload();
           console.log("DRAFT PAYLOAD:", payload);
-  
+
           try {
             var res = await API.listings.create(payload);
             console.log("DRAFT CREATED:", res);
@@ -916,15 +916,15 @@
         console.warn("Draft button not found on cargo page");
       }
     }
-  
+
     // ============================================================
     // СОЗДАНИЕ ТРАНСПОРТА
     // ============================================================
     function wireCreateTransport() {
       console.log("wireCreateTransport init");
-  
+
       if (document.body.dataset.page !== "transport") return;
-  
+
       // --- Кнопка «Опубликовать» ---
       var publishBtn = document.getElementById("publishBtn");
       if (publishBtn) {
@@ -933,18 +933,18 @@
           setButtonLoading(publishBtn, true, "Опубликовать объявление");
           var payload = await buildTransportPayload();
           console.log("PAYLOAD:", payload);
-  
+
           setButtonLoading(publishBtn, true, "Опубликовать объявление");
           try {
             var res = await API.listings.create(payload);
             console.log("CREATED:", res);
-  
+
             // Отправляем на модерацию
             if (res && res.id) {
               await API.listings.sendToModeration(res.id);
               console.log("SENT TO MODERATION:", res.id);
             }
-  
+
             window.location.href = "cabinet.html";
           } catch (e) {
             console.error("CREATE/MODERATION ERROR:", e);
@@ -953,21 +953,21 @@
           }
         });
       }
-  
+
       // --- Кнопка «Сохранить черновик» ---
       var draftLink = findDraftButton();
       if (draftLink) {
         draftLink.addEventListener("click", async function (e) {
           e.preventDefault();
           console.log("CLICK save draft transport");
-  
+
           var origText = draftLink.textContent;
           draftLink.textContent = "Сохранение…";
           draftLink.style.pointerEvents = "none";
-  
+
           var payload = await buildTransportPayload();
           console.log("DRAFT PAYLOAD:", payload);
-  
+
           try {
             var res = await API.listings.create(payload);
             console.log("DRAFT CREATED:", res);
@@ -983,7 +983,7 @@
         console.warn("Draft button not found on transport page");
       }
     }
-  
+
     // Находит кнопку/ссылку «Сохранить черновик» в блоке publish__actions
     function findDraftButton() {
       // Сначала ищем в .publish__actions
@@ -1005,46 +1005,46 @@
       }
       return null;
     }
-  
+
     // ============================================================
     // SETTINGS PAGE
     // ============================================================
     function wireSettings() {
       if (document.body.dataset.page !== "settings") return;
-  
+
       if (!API.tokens.isAuthed) {
         window.location.replace("auth.html");
         return;
       }
-  
+
       var form = document.querySelector(".settings-form");
       if (!form) return;
-  
+
       var inputs = form.querySelectorAll("input");
       var nameInput = inputs[0];
       var emailInput = inputs[1];
       var phoneInput = inputs[2];
-  
+
       API.users.me()
         .then(function (user) {
           var email = user.email;
           var name = user.name || email.split("@")[0];
           var phone = user.phone || "";
-  
+
           var nameEl = document.querySelector(".profile-card__name");
           var emailEl = document.querySelector(".profile-card__email");
           var avatar = document.querySelector(".avatar");
-  
+
           if (nameEl) nameEl.textContent = name;
           if (emailEl) emailEl.textContent = email;
           if (avatar) avatar.textContent = (name[0] || "U").toUpperCase();
-  
+
           if (emailInput) {
             emailInput.value = email;
             emailInput.readOnly = true;
             emailInput.classList.add("input--readonly");
           }
-  
+
           if (nameInput) {
             nameInput.value = name;
             if (!nameInput.value.trim()) nameInput.placeholder = "Введите имя";
@@ -1052,7 +1052,7 @@
               nameInput.placeholder = nameInput.value.trim() ? "" : "Введите имя";
             });
           }
-  
+
           if (phoneInput) {
             phoneInput.value = phone;
             if (!phoneInput.value.trim()) phoneInput.placeholder = "Введите телефон";
@@ -1065,20 +1065,20 @@
           console.error(err);
           alert("Не удалось загрузить данные пользователя");
         });
-  
+
       form.addEventListener("submit", function (e) {
         e.preventDefault();
-  
+
         var name = (nameInput.value || "").trim();
         var phone = (phoneInput.value || "").trim();
-  
+
         if (!name) {
           setFieldError(nameInput, "Введите имя");
           return;
         }
-  
+
         setFieldError(nameInput, null);
-  
+
         API.users.updateMe({ name: name, phone: phone || null })
           .then(function (updatedUser) {
             var actualName = updatedUser.name || updatedUser.email.split("@")[0];
@@ -1094,7 +1094,7 @@
           });
       });
     }
-  
+
     // ============================================================
     // РЕДАКТИРОВАНИЕ ОБЪЯВЛЕНИЯ — общая логика (груз + транспорт)
     // ============================================================
@@ -1111,54 +1111,54 @@
     // бы старую, несохранённую версию объявления.
     function wireEditListingForm(config) {
       console.log(config.logLabel + " started");
-  
+
       if (document.body.dataset.page !== config.page) return;
-  
+
       if (!API.tokens.isAuthed) {
         window.location.replace("auth.html");
         return;
       }
-  
+
       var id = new URLSearchParams(location.search).get("id");
       if (!id) return;
-  
+
       var form = document.querySelector("form");
       if (!form) return;
-  
+
       var saveBtn = form.querySelector("button[type='submit']");
       var moderationBtn = form.querySelector("[data-send-moderation]");
-  
+
       function setField(key, value) {
         var el = form.querySelector('[data-field="' + key + '"]');
         if (el) el.value = value ?? "";
       }
-  
+
       function getField(key) {
         var el = form.querySelector('[data-field="' + key + '"]');
         return el ? el.value : "";
       }
-  
+
       // =========================
       // LOAD
       // =========================
       API.listings.get(id, { auth: true })
         .then(function (data) {
           if (!data) return;
-  
+
           setField("title", data.title);
           setField("description", data.description);
-  
+
           setField("route.origin.country", data.route?.origin?.country);
           setField("route.origin.city", data.route?.origin?.city);
-  
+
           setField("route.destination.country", data.route?.destination?.country);
           setField("route.destination.city", data.route?.destination?.city);
-  
+
           if (config.withAddress) {
             setField("route.origin.address", data.route?.origin?.address || "");
             setField("route.destination.address", data.route?.destination?.address || "");
           }
-  
+
           config.populateFields(data, setField);
         })
         .catch(function (err) {
@@ -1170,7 +1170,7 @@
             alert("Ошибка загрузки объявления");
           }
         });
-  
+
       // =========================
       // PAYLOAD — общий для "Сохранить" и "На модерацию"
       // =========================
@@ -1183,37 +1183,37 @@
           country: getField("route.destination.country"),
           city: getField("route.destination.city")
         };
-  
+
         if (config.withAddress) {
           origin.address = getField("route.origin.address");
           destination.address = getField("route.destination.address");
         }
-  
+
         var payload = {
           type: config.type,
           title: getField("title"),
           description: getField("description"),
           route: { origin: origin, destination: destination, waypoints: [] }
         };
-  
+
         return Object.assign(payload, config.buildExtra(getField));
       }
-  
+
       // Сохраняет текущее состояние формы. Используется и кнопкой
       // "Сохранить изменения", и кнопкой "Отправить на модерацию".
       function save() {
         return API.listings.update(id, buildPayload());
       }
-  
+
       // =========================
       // SAVE — кнопка "Сохранить изменения"
       // =========================
       form.addEventListener("submit", function (e) {
         e.preventDefault();
-  
+
         setButtonLoading(saveBtn, true, "Сохранить изменения");
         if (moderationBtn) moderationBtn.disabled = true;
-  
+
         save()
           .then(function () {
             window.location.href = "cabinet.html";
@@ -1227,17 +1227,17 @@
             if (moderationBtn) moderationBtn.disabled = false;
           });
       });
-  
+
       // =========================
       // ОТПРАВКА НА МОДЕРАЦИЮ — сначала сохраняем, потом шлём
       // =========================
       if (moderationBtn) {
         var moderationLabel = moderationBtn.textContent.trim() || "Отправить на модерацию";
-  
+
         moderationBtn.addEventListener("click", function () {
           if (saveBtn) saveBtn.disabled = true;
           setButtonLoading(moderationBtn, true, moderationLabel, "Сохранение…");
-  
+
           save()
             .then(function () {
               setButtonLoading(moderationBtn, true, moderationLabel, "Отправка на модерацию…");
@@ -1257,7 +1257,7 @@
         });
       }
     }
-  
+
     // ============================================================
     // EDIT TRANSPORT
     // ============================================================
@@ -1267,13 +1267,13 @@
         type: "TRANSPORT",
         logLabel: "wireEditTransport",
         withAddress: false,
-  
+
         populateFields: function (data, setField) {
           setField("transport.transportType", data.transport?.transportType);
           setField("transport.maxWeight", data.transport?.maxWeight);
           setField("transport.maxVolume", data.transport?.maxVolume);
         },
-  
+
         buildExtra: function (getField) {
           return {
             transport: {
@@ -1285,7 +1285,7 @@
         }
       });
     }
-  
+
     // ============================================================
     // EDIT CARGO
     // ============================================================
@@ -1295,7 +1295,7 @@
         type: "CARGO",
         logLabel: "wireEditCargo",
         withAddress: true,
-  
+
         populateFields: function (data, setField) {
           setField("cargo.cargoType", data.cargo?.cargoType);
           setField("cargo.length", data.cargo?.length);
@@ -1305,7 +1305,7 @@
           setField("cargo.volume", data.cargo?.volume);
           setField("cargo.price", data.cargo?.price);
         },
-  
+
         buildExtra: function (getField) {
           return {
             cargo: {
@@ -1321,17 +1321,17 @@
         }
       });
     }
-  
+
     // ============================================================
     // ПЕРЕКЛЮЧЕНИЕ ГРУЗ <-> ТРАНСПОРТ
     // ============================================================
     function wireListingTypeSelector() {
       var wrapper = document.querySelector("[data-type-select]");
       if (!wrapper) return;
-  
+
       var select = wrapper.querySelector("select");
       if (!select) return;
-  
+
       select.addEventListener("change", function () {
         var value = (select.value || "").trim().toLowerCase();
         if (value === "транспорт") window.location.href = "create-transport.html";
