@@ -24,6 +24,7 @@
       wireEditCargo();
       wireTransportDetail();
       wireListingTypeSelector();
+      wireSearchTypeSelector();
     });
     // ещё раз после полной загрузки — перебить возможный показ ссылки из site.js
     window.addEventListener("load", wireModeratorLink);
@@ -1485,6 +1486,29 @@
         var value = (select.value || "").trim().toLowerCase();
         if (value === "транспорт") window.location.href = "create-transport.html";
         if (value === "груз") window.location.href = "create-cargo.html";
+      });
+    }
+
+    // ============================================================
+    // ПЕРЕКЛЮЧЕНИЕ ПОИСКА ГРУЗ <-> ТРАНСПОРТ
+    // ============================================================
+    function wireSearchTypeSelector() {
+      var wrapper = document.querySelector("[data-search-type-select]");
+      if (!wrapper) return;
+
+      var select = wrapper.querySelector("select");
+      if (!select) return;
+
+      select.addEventListener("change", function () {
+        var value = (select.value || "").trim().toLowerCase();
+
+        if (value === "транспорт") {
+          window.location.href = "search-transport.html";
+        }
+
+        if (value === "груз") {
+          window.location.href = "search-cargo.html";
+        }
       });
     }
   })();
