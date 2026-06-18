@@ -29,6 +29,7 @@
       wireSearchTypeSelector();
       wireCreateListingButton();
       wireModeratorDetailCargo();
+      wireModeratorDetailTransport();
     });
     // ещё раз после полной загрузки — перебить возможный показ ссылки из site.js
     window.addEventListener("load", wireModeratorLink);
@@ -397,6 +398,210 @@
         });
     }
 
+    // ============================================================
+    // MODERATOR DETAIL TRANSPORT
+    // ============================================================
+
+    function wireModeratorDetailTransport() {
+
+      if (document.body.dataset.page !== "moderator-detail-transport") {
+        return;
+      }
+
+      var id = new URLSearchParams(location.search).get("id");
+
+      if (!id) {
+        console.error("Moderation listing id not found");
+        return;
+      }
+
+      (async function () {
+
+        try {
+
+          var queue = await API.moderation.queue();
+
+          var listing = queue.find(function (item) {
+            return item.listingId === id;
+          });
+
+          if (!listing) {
+            console.error("Listing not found in moderation queue");
+            return;
+          }
+
+          var route = listing.route || {};
+          var origin = route.origin || {};
+          var dest = route.destination || {};
+          var transport = listing.transport || {};
+
+          // ----------------------------
+          // HEADER
+          // ----------------------------
+
+          var title = document.querySelector(".detail-head__title");
+
+          if (title) {
+            title.textContent =
+              (origin.city || "") +
+              " → " +
+              (dest.city || "");
+          }
+
+          var sub = document.querySelector(".detail-head__sub");
+
+          if (sub) {
+            sub.textContent =
+              "Расстояние: " +
+              Math.round(route.distanceKm || 0) +
+              " км • Опубликовано " +
+              fmtDate(listing.createdAt);
+          }
+
+          // ----------------------------
+          // ROUTE
+          // ----------------------------
+
+          var originCity = document.querySelector("[data-origin-city]");
+          if (originCity) originCity.textContent = origin.city || "";
+
+          var originCountry =
+            document.querySelector("[data-origin-country]");
+
+          if (originCountry) {
+            originCountry.textContent =
+              (origin.country || "")
+                .substring(0, 2)
+                .toUpperCase();
+          }
+
+          var destCity =
+            document.querySelector("[data-dest-city]");
+
+          if (destCity) {
+            destCity.textContent = dest.city || "";
+          }
+
+          var destCountry =
+            document.querySelector("[data-dest-country]");
+
+          if (destCountry) {
+            destCountry.textContent =
+              (dest.country || "")
+                .substring(0, 2)
+                .toUpperCase();
+          }
+
+          var routeLine =
+            document.querySelector(".route-line");
+
+          if (routeLine) {
+            routeLine.innerHTML =
+              'Прямой рейс<span class="dash"></span>' +
+              Math.round(route.distanceKm || 0) +
+              " км";
+          }
+
+          // ----------------------------
+          // TRANSPORT
+          // ----------------------------
+
+          var badge = document.querySelector(
+            "[data-transport-type-badge]"
+          );
+
+          if (badge) {
+            badge.textContent =
+              transport.transportType || "Транспорт";
+          }
+
+          var transportType =
+            document.querySelector("[data-transport-type]");
+
+          if (transportType) {
+            transportType.textContent =
+              transport.transportType || "—";
+          }
+
+          var maxWeight =
+            document.querySelector("[data-max-weight]");
+
+          if (maxWeight) {
+            maxWeight.textContent =
+              transport.maxWeight != null
+                ? transport.maxWeight + " т"
+                : "—";
+          }
+
+          var maxVolume =
+            document.querySelector("[data-max-volume]");
+
+          if (maxVolume) {
+            maxVolume.textContent =
+              transport.maxVolume != null
+                ? transport.maxVolume + " м³"
+                : "—";
+          }
+
+          // ----------------------------
+          // DESCRIPTION
+          // ----------------------------
+
+          var desc =
+            document.querySelector("[data-description]");
+
+          if (desc) {
+            desc.textContent =
+              listing.description || "";
+          }
+
+          // ----------------------------
+          // OWNER
+          // ----------------------------
+
+          try {
+
+            var owner =
+              await API.users.get(listing.ownerId);
+
+            var ownerName =
+              document.querySelector("[data-owner-name]");
+
+            var ownerEmail =
+              document.querySelector("[data-owner-email]");
+
+            var ownerPhone =
+              document.querySelector("[data-owner-phone]");
+
+            if (ownerName) {
+              ownerName.textContent =
+                owner.name || "Не указано";
+            }
+
+            if (ownerEmail) {
+              ownerEmail.textContent =
+                owner.email || "Не указано";
+            }
+
+            if (ownerPhone) {
+              ownerPhone.textContent =
+                owner.phone || "Не указан";
+            }
+
+          } catch (e) {
+            console.error("Failed to load owner", e);
+          }
+
+        } catch (err) {
+
+          console.error(err);
+          alert("Ошибка загрузки заявки");
+
+        }
+
+      })();
+    }
+
     function wireModeratorDetailCargo() {
 
       if (document.body.dataset.page !== "moderator-detail-cargo") {
@@ -410,8 +615,11 @@
         return;
       }
     
-      API.moderation.queue()
-        .then(function (queue) {
+      (async function () {
+    
+        try {
+    
+          var queue = await API.moderation.queue();
     
           var listing = queue.find(function (item) {
             return item.listingId === id;
@@ -442,7 +650,7 @@
             sub.textContent =
               "Расстояние: " +
               Math.round(route.distanceKm || 0) +
-              " км • " +
+              " км • Опубликовано " +
               fmtDate(listing.createdAt);
           }
     
@@ -468,18 +676,27 @@
               (dest.country || "").substring(0, 2).toUpperCase();
           }
     
-          var routeLine = document.querySelector("[data-route-line]");
+          var routeLine = document.querySelector(".route-line");
           if (routeLine) {
-            routeLine.textContent =
-              Math.round(route.distanceKm || 0) + " км";
+            routeLine.innerHTML =
+              'Прямой рейс<span class="dash"></span>' +
+              Math.round(route.distanceKm || 0) +
+              " км";
           }
     
           // ----------------------------
           // CARGO
           // ----------------------------
     
-          var type = document.querySelector("[data-cargo-type]");
-          if (type) type.textContent = cargo.cargoType || "—";
+          var badge = document.querySelector(".badge");
+          if (badge) {
+            badge.textContent = cargo.cargoType || "Груз";
+          }
+    
+          var cargoType = document.querySelector("[data-cargo-type]");
+          if (cargoType) {
+            cargoType.textContent = cargo.cargoType || "—";
+          }
     
           var weight = document.querySelector("[data-weight]");
           if (weight) {
@@ -505,21 +722,73 @@
           if (desc) {
             desc.textContent = listing.description || "";
           }
-    
+
           // ----------------------------
-          // OWNER (пока без user-service)
+          // price
           // ----------------------------
-    
-          var owner = document.querySelector("[data-owner-company]");
-          if (owner) {
-            owner.textContent = "Owner ID: " + listing.ownerId;
+
+          var price = document.querySelector("[data-cargo-price]");
+          var pricePerKm = document.querySelector("[data-price-per-km]");
+
+          if (price) {
+            price.textContent =
+              cargo.price != null
+                ? cargo.price + " €"
+                : "Цена не указана";
+          }
+
+          if (pricePerKm) {
+
+            if (
+              cargo.price != null &&
+              route.distanceKm
+            ) {
+
+              pricePerKm.textContent =
+                "= " +
+                (cargo.price / route.distanceKm).toFixed(2) +
+                " €/км";
+
+            } else {
+
+              pricePerKm.textContent = "";
+            }
           }
     
-        })
-        .catch(function (err) {
+          // ----------------------------
+          // OWNER (ВТОРОЙ ЗАПРОС)
+          // ----------------------------
+    
+          try {
+    
+            var owner = await API.users.get(listing.ownerId);
+    
+            var ownerName = document.querySelector("[data-owner-name]");
+            var ownerEmail = document.querySelector("[data-owner-email]");
+            var ownerPhone = document.querySelector("[data-owner-phone]");
+    
+            if (ownerName) {
+              ownerName.textContent = owner.name || "Не указано";
+            }
+    
+            if (ownerEmail) {
+              ownerEmail.textContent = owner.email || "Не указано";
+            }
+    
+            if (ownerPhone) {
+              ownerPhone.textContent = owner.phone || "Не указан";
+            }
+    
+          } catch (e) {
+            console.error("Failed to load owner", e);
+          }
+    
+        } catch (err) {
           console.error(err);
           alert("Ошибка загрузки заявки");
-        });
+        }
+    
+      })();
     }
 
     // ============================================================
