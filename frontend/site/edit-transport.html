@@ -15,25 +15,23 @@
 <body data-page="edit-transport" data-login="solid">
 
 <header class="header">
-  <header class="header">
-    <div class="container header__inner">
-      <a href="index.html" class="logo">Freight<b>Hub</b></a>
-      <nav class="nav" data-nav-menu aria-label="Основная навигация">
-        <a href="index.html" class="nav__link" data-nav-key="home">Главная</a>
-        <a href="search-cargo.html" class="nav__link" data-nav-key="cargo">Найти груз</a>
-        <a href="search-transport.html" class="nav__link" data-nav-key="transport">Найти транспорт</a>
-        <a href="about.html" class="nav__link" data-nav-key="about">О сервисе</a>
-        <a href="index.html#contacts" class="nav__link" data-nav-key="contacts">Контакты</a>
-        <a href="moderator.html" class="nav__link" data-nav-key="moderation" data-mod-link hidden>Модерация</a>
-      </nav>
-      <div class="header__actions">
-        <a href="auth.html" class="btn btn--primary" data-login-btn>Войти
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
-        </a>
-        <button class="burger" data-burger type="button" aria-label="Меню" aria-expanded="false"><span></span><span></span><span></span></button>
-      </div>
+  <div class="container header__inner">
+    <a href="index.html" class="logo">Freight<b>Hub</b></a>
+    <nav class="nav" data-nav-menu aria-label="Основная навигация">
+      <a href="index.html" class="nav__link" data-nav-key="home">Главная</a>
+      <a href="search-cargo.html" class="nav__link" data-nav-key="cargo">Найти груз</a>
+      <a href="search-transport.html" class="nav__link" data-nav-key="transport">Найти транспорт</a>
+      <a href="about.html" class="nav__link" data-nav-key="about">О сервисе</a>
+      <a href="index.html#contacts" class="nav__link" data-nav-key="contacts">Контакты</a>
+      <a href="moderator.html" class="nav__link" data-nav-key="moderation" data-mod-link hidden>Модерация</a>
+    </nav>
+    <div class="header__actions">
+      <a href="auth.html" class="btn btn--primary" data-login-btn>Войти
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
+      </a>
+      <button class="burger" data-burger type="button" aria-label="Меню" aria-expanded="false"><span></span><span></span><span></span></button>
     </div>
-  </header>
+  </div>
 </header>
 
 <main class="container wizard">
@@ -78,6 +76,12 @@
           <input class="input" data-field="route.destination.address">
         </div>
       </div>
+
+      <!-- Карта (всегда видна) -->
+      <div class="map-box" style="margin-top:var(--space-8)">
+        <div class="map-box__head">Маршрут на карте</div>
+        <div class="map-box__area">!КАРТА!</div>
+      </div>
     </div>
 
     <!-- ================= TRANSPORT ================= -->
@@ -121,7 +125,7 @@
 
     <!-- ================= SUBMIT ================= -->
     <div style="text-align:center; padding: 40px 0; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
-
+  
       <button class="btn btn--gray btn--lg" type="button" data-send-moderation>
         Отправить на модерацию
       </button>
@@ -130,12 +134,6 @@
         Сохранить изменения
       </button>
 
-    </div>
-
-    <!-- ================= MAP ================= -->
-    <div class="map-box" style="margin-top:32px">
-      <div class="map-box__head">Маршрут на карте</div>
-      <div class="map-box__area" style="height:380px;border-radius:12px;overflow:hidden;background:#e8edf2"></div>
     </div>
 
   </form>

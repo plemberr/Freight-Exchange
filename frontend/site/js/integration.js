@@ -294,14 +294,14 @@
         var meta = [];
         if (type === "CARGO") {
           if (it.cargoType) meta.push("<span>" + esc(it.cargoType) + "</span>");
-          if (it.weight   != null) meta.push("<span>" + fmtNum(it.weight)  + " т</span>");
+          if (it.weight   != null) meta.push("<span>" + fmtNum(it.weight)  + " кг</span>");
           if (it.volume   != null) meta.push("<span>" + fmtNum(it.volume)  + " м³</span>");
           if (it.length   != null) meta.push("<span>Д " + fmtNum(it.length) + " м</span>");
           if (it.width    != null) meta.push("<span>Ш " + fmtNum(it.width)  + " м</span>");
           if (it.height   != null) meta.push("<span>В " + fmtNum(it.height) + " м</span>");
         } else {
           if (it.transportType) meta.push("<span>" + esc(it.transportType) + "</span>");
-          if (it.maxWeight != null) meta.push("<span>до " + fmtNum(it.maxWeight) + " т</span>");
+          if (it.maxWeight != null) meta.push("<span>до " + fmtNum(it.maxWeight) + " кг</span>");
           if (it.maxVolume != null) meta.push("<span>до " + fmtNum(it.maxVolume) + " м³</span>");
         }
         var dateVal = it.createdAt || it.created_at;
@@ -903,7 +903,7 @@
           if (maxWeight) {
             maxWeight.textContent =
               transport.maxWeight != null
-                ? transport.maxWeight + " т"
+                ? transport.maxWeight + " кг"
                 : "—";
           }
 
@@ -1075,7 +1075,7 @@
           var weight = document.querySelector("[data-weight]");
           if (weight) {
             weight.textContent =
-              cargo.weight != null ? cargo.weight + " т" : "—";
+              cargo.weight != null ? cargo.weight + " кг" : "—";
           }
 
           var volume = document.querySelector("[data-volume]");
@@ -1264,62 +1264,141 @@
     }
 
     // ============================================================
-    // КАРТА И ГЕОКОДИНГ
+    // КАРТА И ГЕОКОДИНГ (MapLibre GL JS)
     // ============================================================
 
-    // Состояние карты — хранит текущие координаты и объекты Leaflet
+    // Состояние карты — хранит текущие координаты и объекты MapLibre
     var mapState = {
       map: null,
       originMarker: null,
       destMarker: null,
-      routeLayer: null,
-      origin: null,     // { latitude, longitude, city, country }
-      destination: null // { latitude, longitude, city, country }
+      routeLayer: null,  // true, если на карте сейчас нарисован маршрут
+      pinMode: null,     // "origin" | "destination" | null — режим ручной расстановки точек
+      ready: null,       // Promise — резолвится, когда стартовые координаты на странице редактирования определены
+      origin: null,      // { latitude, longitude, city, country, displayName }
+      destination: null  // { latitude, longitude, city, country, displayName }
     };
 
-    // Иконки для маркеров
-    function makeIcon(color) {
-      return window.L && L.divIcon({
-        className: "",
-        html: '<div style="width:14px;height:14px;border-radius:50%;background:' + color + ';border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>',
-        iconSize: [14, 14],
-        iconAnchor: [7, 7]
-      });
+    // Простой растровый стиль на тайлах OSM — без ключей и сторонних сервисов
+    var OSM_STYLE = {
+      version: 8,
+      sources: {
+        "osm-tiles": {
+          type: "raster",
+          tiles: [
+            "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          ],
+          tileSize: 256,
+          attribution: "© OpenStreetMap contributors"
+        }
+      },
+      layers: [
+        { id: "osm-tiles", type: "raster", source: "osm-tiles", minzoom: 0, maxzoom: 19 }
+      ]
+    };
+
+    // Подгружает MapLibre GL JS (CSS + JS) один раз, дальше отдаёт готовый промис
+    var mapLibreLoadingPromise = null;
+    function loadMapLibre(callback) {
+      if (window.maplibregl) { callback(); return; }
+
+      if (!mapLibreLoadingPromise) {
+        mapLibreLoadingPromise = new Promise(function (resolve) {
+          var cssLink = document.createElement("link");
+          cssLink.rel = "stylesheet";
+          cssLink.href = "https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.7.3/maplibre-gl.css";
+          document.head.appendChild(cssLink);
+
+          var script = document.createElement("script");
+          script.src = "https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.7.3/maplibre-gl.js";
+          script.onload = function () { resolve(); };
+          document.head.appendChild(script);
+        });
+      }
+
+      mapLibreLoadingPromise.then(callback);
     }
 
-    // Инициализирует карту Leaflet внутри .map-box__area
+    // DOM-элемент маркера (вместо Leaflet divIcon)
+    function buildMarkerEl(color) {
+      var el = document.createElement("div");
+      el.style.cssText =
+        "width:14px;height:14px;border-radius:50%;background:" + color +
+        ";border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)";
+      return el;
+    }
+
+    // Инициализирует карту MapLibre внутри .map-box__area
     function initMap() {
-      if (!window.L) return;
+      if (mapState.map) return; // уже инициализирована
       var container = document.querySelector(".map-box__area");
-      if (!container) return;
+      if (!container || !window.maplibregl) return;
 
-      // Убираем заглушку, ставим нормальный контейнер
-      container.innerHTML = '<div id="wizard-map" style="width:100%;height:100%;border-radius:inherit"></div>';
+      container.innerHTML =
+        '<div id="wizard-map" style="width:100%;height:100%;min-height:320px;border-radius:inherit"></div>';
 
-      mapState.map = L.map("wizard-map", { zoomControl: true }).setView([51.0, 10.0], 5);
+      var map = new maplibregl.Map({
+        container: "wizard-map",
+        style: OSM_STYLE,
+        center: [10, 51],
+        zoom: 4
+      });
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-        maxZoom: 18
-      }).addTo(mapState.map);
+      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+
+      // Фикс бага «страница прыгает наверх при клике по карте»: канвас по умолчанию
+      // получает tabindex и фокусируется по клику, что может дёргать скролл —
+      // клавиатурное управление картой нам не нужно, убираем его из таб-порядка
+      map.on("load", function () {
+        var canvas = map.getCanvas();
+        canvas.setAttribute("tabindex", "-1");
+        canvas.style.outline = "none";
+        requestAnimationFrame(function () { map.resize(); });
+      });
+
+      window.addEventListener("resize", function () { map.resize(); });
+
+      // Доп. страховка: если клик/тач по карте всё же сдвинул скролл страницы —
+      // возвращаем его обратно (легитимный скролл страницы никогда не начинается
+      // с pointerdown/up прямо на канвасе карты — там это пан/зум)
+      var savedScrollY = null;
+      container.addEventListener("pointerdown", function () {
+        savedScrollY = window.scrollY;
+      });
+      container.addEventListener("pointerup", function () {
+        if (savedScrollY === null) return;
+        var y = savedScrollY;
+        savedScrollY = null;
+        requestAnimationFrame(function () {
+          setTimeout(function () {
+            if (Math.abs(window.scrollY - y) > 2) window.scrollTo(0, y);
+          }, 50);
+        });
+      });
+
+      mapState.map = map;
     }
 
     // Обновляет маркер на карте
     function setMarker(role, lat, lon, label) {
       if (!mapState.map) return;
       var color = role === "origin" ? "#2563eb" : "#dc2626";
-      var icon = makeIcon(color);
+      var popup = new maplibregl.Popup({ offset: 12 })
+        .setText(label || (role === "origin" ? "Отправление" : "Назначение"));
+
+      var marker = new maplibregl.Marker({ element: buildMarkerEl(color) })
+        .setLngLat([lon, lat])
+        .setPopup(popup)
+        .addTo(mapState.map);
 
       if (role === "origin") {
         if (mapState.originMarker) mapState.originMarker.remove();
-        mapState.originMarker = L.marker([lat, lon], { icon: icon })
-          .addTo(mapState.map)
-          .bindPopup(label || "Отправление");
+        mapState.originMarker = marker;
       } else {
         if (mapState.destMarker) mapState.destMarker.remove();
-        mapState.destMarker = L.marker([lat, lon], { icon: icon })
-          .addTo(mapState.map)
-          .bindPopup(label || "Назначение");
+        mapState.destMarker = marker;
       }
     }
 
@@ -1327,30 +1406,64 @@
     function fitMapBounds() {
       if (!mapState.map) return;
       var points = [];
-      if (mapState.origin)      points.push([mapState.origin.latitude,      mapState.origin.longitude]);
-      if (mapState.destination) points.push([mapState.destination.latitude, mapState.destination.longitude]);
-      if (points.length === 1)  mapState.map.setView(points[0], 10);
-      if (points.length === 2)  mapState.map.fitBounds(points, { padding: [40, 40] });
+      if (mapState.origin)      points.push([mapState.origin.longitude,      mapState.origin.latitude]);
+      if (mapState.destination) points.push([mapState.destination.longitude, mapState.destination.latitude]);
+
+      if (points.length === 1) {
+        mapState.map.jumpTo({ center: points[0], zoom: 10 });
+      } else if (points.length === 2) {
+        var bounds = new maplibregl.LngLatBounds(points[0], points[0]);
+        bounds.extend(points[1]);
+        mapState.map.fitBounds(bounds, { padding: 40, maxZoom: 12 });
+      }
+    }
+
+    // Убирает линию маршрута с карты и сбрасывает шапку
+    function clearRoute() {
+      if (mapState.map) {
+        if (mapState.map.getLayer("route-line")) mapState.map.removeLayer("route-line");
+        if (mapState.map.getSource("route-line")) mapState.map.removeSource("route-line");
+      }
+      mapState.routeLayer = null;
+      var head = document.querySelector(".map-box__head");
+      if (head) head.textContent = "Маршрут на карте";
     }
 
     // Рисует маршрут по polyline из /routes/calculate
-    // ORS возвращает encoded polyline (строка), декодируем через L.Polyline.fromEncoded если доступен,
-    // иначе через нашу встроенную функцию
     function drawRoute(polyline) {
       if (!mapState.map || !polyline) return;
-      if (mapState.routeLayer) { mapState.routeLayer.remove(); mapState.routeLayer = null; }
 
       var latlngs = decodePolyline(polyline);
       if (!latlngs || !latlngs.length) return;
 
-      mapState.routeLayer = L.polyline(latlngs, {
-        color: "#2563eb",
-        weight: 4,
-        opacity: 0.75,
-        lineJoin: "round"
-      }).addTo(mapState.map);
+      var coords = latlngs.map(function (p) { return [p[1], p[0]]; }); // [lat,lng] → [lng,lat]
+      var geojson = { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: coords } };
 
-      mapState.map.fitBounds(mapState.routeLayer.getBounds(), { padding: [40, 40] });
+      function applyData() {
+        var src = mapState.map.getSource("route-line");
+        if (src) {
+          src.setData(geojson);
+        } else {
+          mapState.map.addSource("route-line", { type: "geojson", data: geojson });
+          mapState.map.addLayer({
+            id: "route-line",
+            type: "line",
+            source: "route-line",
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#2563eb", "line-width": 4, "line-opacity": 0.75 }
+          });
+        }
+        mapState.routeLayer = true;
+
+        var bounds = coords.reduce(function (b, c) { return b.extend(c); }, new maplibregl.LngLatBounds(coords[0], coords[0]));
+        mapState.map.fitBounds(bounds, { padding: 40, maxZoom: 12 });
+      }
+
+      if (mapState.map.isStyleLoaded()) {
+        applyData();
+      } else {
+        mapState.map.once("load", applyData);
+      }
     }
 
     // Стандартный Google/ORS encoded polyline decoder
@@ -1371,7 +1484,7 @@
 
     // Запрашивает маршрут у бэка и рисует его на карте
     async function updateMapRoute() {
-      if (!mapState.origin || !mapState.destination) return;
+      if (!mapState.origin || !mapState.destination) { clearRoute(); return; }
       try {
         var routeData = await API.routes.calculate({
           origin:      { latitude: mapState.origin.latitude,      longitude: mapState.origin.longitude },
@@ -1487,26 +1600,122 @@
       });
     }
 
-    // Главная функция — инициализирует карту и вешает геокодинг на поля шага 1
+    // Реверс-геокодинг клика по карте: определяет адрес по координатам и
+    // применяет его как точку отправления/назначения
+    async function reverseGeocodeAndApply(role, lat, lng, callbacks) {
+      var loc;
+      try {
+        var r = await API.routes.reverseGeocode(lat, lng);
+        loc = {
+          latitude: lat,
+          longitude: lng,
+          city: (r && r.city) || null,
+          country: (r && r.country) || null,
+          displayName: (r && r.displayName) || null
+        };
+      } catch (e) {
+        console.warn("Reverse geocode failed:", e);
+        loc = { latitude: lat, longitude: lng, city: null, country: null, displayName: null };
+      }
+
+      if (role === "origin") mapState.origin = loc; else mapState.destination = loc;
+      setMarker(role, lat, lng, loc.displayName || (role === "origin" ? "Отправление" : "Назначение"));
+      fitMapBounds();
+      updateMapRoute();
+
+      if (callbacks) {
+        if (role === "origin" && callbacks.onOriginPlaced) callbacks.onOriginPlaced(loc);
+        if (role === "destination" && callbacks.onDestinationPlaced) callbacks.onDestinationPlaced(loc);
+      }
+      return loc;
+    }
+
+    // Добавляет панель ручной расстановки точек («Отправление» / «Назначение» / «Очистить»)
+    // в .map-box и вешает обработчик клика по карте. callbacks: { onOriginPlaced, onDestinationPlaced }
+    function wireManualPinToolbar(mapBoxEl, callbacks) {
+      if (!mapBoxEl || mapBoxEl.querySelector(".map-box__toolbar")) return;
+
+      var toolbar = document.createElement("div");
+      toolbar.className = "map-box__toolbar";
+      toolbar.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 0 4px";
+
+      var btnOrigin = document.createElement("button");
+      btnOrigin.type = "button";
+      btnOrigin.className = "btn btn--outline";
+      btnOrigin.textContent = "Отправление";
+
+      var btnDest = document.createElement("button");
+      btnDest.type = "button";
+      btnDest.className = "btn btn--outline";
+      btnDest.textContent = "Назначение";
+
+      var btnClear = document.createElement("button");
+      btnClear.type = "button";
+      btnClear.className = "btn btn--gray";
+      btnClear.textContent = "Очистить точки";
+
+      toolbar.appendChild(btnOrigin);
+      toolbar.appendChild(btnDest);
+      toolbar.appendChild(btnClear);
+
+      var hint = document.createElement("div");
+      hint.className = "map-box__hint";
+      hint.style.cssText = "font-size:13px;color:var(--text-muted,#64748b);width:100%";
+      hint.textContent = "Выберите точку и кликните по карте, чтобы поставить её вручную";
+      toolbar.appendChild(hint);
+
+      var head = mapBoxEl.querySelector(".map-box__head");
+      if (head) {
+        head.insertAdjacentElement("afterend", toolbar);
+      } else {
+        mapBoxEl.insertBefore(toolbar, mapBoxEl.firstChild);
+      }
+
+      function setMode(mode) {
+        mapState.pinMode = mode;
+        btnOrigin.classList.toggle("btn--primary", mode === "origin");
+        btnOrigin.classList.toggle("btn--outline", mode !== "origin");
+        btnDest.classList.toggle("btn--primary", mode === "destination");
+        btnDest.classList.toggle("btn--outline", mode !== "destination");
+        if (mapState.map) mapState.map.getCanvas().style.cursor = mode ? "crosshair" : "";
+      }
+
+      btnOrigin.addEventListener("click", function (e) {
+        e.preventDefault();
+        setMode(mapState.pinMode === "origin" ? null : "origin");
+      });
+
+      btnDest.addEventListener("click", function (e) {
+        e.preventDefault();
+        setMode(mapState.pinMode === "destination" ? null : "destination");
+      });
+
+      btnClear.addEventListener("click", function (e) {
+        e.preventDefault();
+        mapState.origin = null;
+        mapState.destination = null;
+        if (mapState.originMarker) { mapState.originMarker.remove(); mapState.originMarker = null; }
+        if (mapState.destMarker) { mapState.destMarker.remove(); mapState.destMarker = null; }
+        clearRoute();
+        setMode(null);
+      });
+
+      if (mapState.map) {
+        mapState.map.on("click", function (e) {
+          e.preventDefault();
+          if (!mapState.pinMode) return;
+          reverseGeocodeAndApply(mapState.pinMode, e.lngLat.lat, e.lngLat.lng, callbacks);
+        });
+      }
+    }
+
+    // Главная функция — инициализирует карту и вешает геокодинг на поля шага 1 (страницы создания)
     function wireWizardMap() {
       // Только на страницах создания объявления
       var page = document.body.dataset.page;
       if (page !== "cargo" && page !== "transport") return;
 
-      // Загружаем Leaflet CSS и JS, потом инициализируем
-      if (!window.L) {
-        var cssLink = document.createElement("link");
-        cssLink.rel = "stylesheet";
-        cssLink.href = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css";
-        document.head.appendChild(cssLink);
-
-        var script = document.createElement("script");
-        script.src = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js";
-        script.onload = function () { setupMapAndGeocoding(); };
-        document.head.appendChild(script);
-      } else {
-        setupMapAndGeocoding();
-      }
+      loadMapLibre(setupMapAndGeocoding);
     }
 
     function setupMapAndGeocoding() {
@@ -1531,7 +1740,7 @@
       // Когда выбран пункт назначения
       function onDestResolved(coords) {
         mapState.destination = coords;
-        setMarker("dest", coords.latitude, coords.longitude, coords.displayName);
+        setMarker("destination", coords.latitude, coords.longitude, coords.displayName);
         fitMapBounds();
         updateMapRoute();
       }
@@ -1559,6 +1768,140 @@
 
       // Поле точного адреса разгрузки
       attachGeocodeInput(allInputs[5], "destination", onDestResolved);
+
+      // Ручная расстановка точек кликом по карте — пишем результат обратно в поля шага 1
+      wireManualPinToolbar(document.querySelector(".map-box"), {
+        onOriginPlaced: function (loc) {
+          if (allInputs[1]) allInputs[1].value = loc.city || "";
+          if (allInputs[0] && loc.country) allInputs[0].value = loc.country;
+          if (allInputs[2]) allInputs[2].value = loc.displayName || "";
+        },
+        onDestinationPlaced: function (loc) {
+          if (allInputs[4]) allInputs[4].value = loc.city || "";
+          if (allInputs[3] && loc.country) allInputs[3].value = loc.country;
+          if (allInputs[5]) allInputs[5].value = loc.displayName || "";
+        }
+      });
+    }
+
+    // Возвращает координаты точки для начальной отрисовки карты на странице редактирования:
+    // приоритет — уже сохранённые latitude/longitude, иначе геокодируем город+страну
+    function initialLoc(pointData, fallbackCity, fallbackCountry) {
+      if (pointData && pointData.latitude != null && pointData.longitude != null) {
+        return Promise.resolve({
+          latitude: Number(pointData.latitude),
+          longitude: Number(pointData.longitude),
+          city: pointData.city || fallbackCity || null,
+          country: pointData.country || fallbackCountry || null,
+          displayName: pointData.address || fallbackCity || null
+        });
+      }
+      var query = [fallbackCity, fallbackCountry].filter(Boolean).join(", ");
+      return geocodeAddress(query);
+    }
+
+    // Карта на странице редактирования (edit-cargo.html / edit-transport.html)
+    function wireEditRouteMap(config, data, form) {
+      var mapBoxEl = form.querySelector(".map-box");
+      if (!mapBoxEl) return;
+
+      function setField(key, value) {
+        var el = form.querySelector('[data-field="' + key + '"]');
+        if (el) el.value = value ?? "";
+      }
+
+      loadMapLibre(function () {
+        initMap();
+
+        var originReady = initialLoc(data.route && data.route.origin, data.route?.origin?.city, data.route?.origin?.country)
+          .then(function (loc) {
+            if (!loc) return;
+            mapState.origin = loc;
+            setMarker("origin", loc.latitude, loc.longitude, loc.displayName || "Отправление");
+          });
+
+        var destReady = initialLoc(data.route && data.route.destination, data.route?.destination?.city, data.route?.destination?.country)
+          .then(function (loc) {
+            if (!loc) return;
+            mapState.destination = loc;
+            setMarker("destination", loc.latitude, loc.longitude, loc.displayName || "Назначение");
+          });
+
+        mapState.ready = Promise.all([originReady, destReady]).then(function () {
+          fitMapBounds();
+          updateMapRoute();
+        });
+
+        // Ручная расстановка точек кликом по карте — пишем результат обратно в поля формы
+        wireManualPinToolbar(mapBoxEl, {
+          onOriginPlaced: function (loc) {
+            setField("route.origin.city", loc.city || "");
+            if (loc.country) setField("route.origin.country", loc.country);
+            if (config.withAddress) setField("route.origin.address", loc.displayName || "");
+          },
+          onDestinationPlaced: function (loc) {
+            setField("route.destination.city", loc.city || "");
+            if (loc.country) setField("route.destination.country", loc.country);
+            if (config.withAddress) setField("route.destination.address", loc.displayName || "");
+          }
+        });
+
+        // Двусторонняя синхронизация: правка текстовых полей тоже двигает карту
+        function syncFromInput(input, role) {
+          attachGeocodeInput(input, role, function (coords) {
+            if (role === "origin") mapState.origin = coords; else mapState.destination = coords;
+            setMarker(role, coords.latitude, coords.longitude, coords.displayName);
+            fitMapBounds();
+            updateMapRoute();
+          });
+        }
+
+        syncFromInput(form.querySelector('[data-field="route.origin.city"]'), "origin");
+        syncFromInput(form.querySelector('[data-field="route.destination.city"]'), "destination");
+        if (config.withAddress) {
+          syncFromInput(form.querySelector('[data-field="route.origin.address"]'), "origin");
+          syncFromInput(form.querySelector('[data-field="route.destination.address"]'), "destination");
+        }
+      });
+    }
+
+    // Карта на странице просмотра объявления (listing-detail.html / listing-detail-transport.html)
+    // Только отображение: маркеры отправления/назначения + маршрут. Без ручной расстановки точек —
+    // объявление здесь не редактируется.
+    function wireDetailMap(route) {
+      var mapBoxEl = document.querySelector(".map-box");
+      if (!mapBoxEl || !route) return;
+
+      var origin = route.origin || {};
+      var destination = route.destination || {};
+
+      // Если по обеим точкам нет ни сохранённых координат, ни города/страны для геокодинга — карту не показываем
+      var originUsable = (origin.latitude != null && origin.longitude != null) || origin.city || origin.country;
+      var destUsable = (destination.latitude != null && destination.longitude != null) || destination.city || destination.country;
+      if (!originUsable && !destUsable) return;
+
+      loadMapLibre(function () {
+        initMap();
+
+        var originReady = initialLoc(origin, origin.city, origin.country)
+          .then(function (loc) {
+            if (!loc) return;
+            mapState.origin = loc;
+            setMarker("origin", loc.latitude, loc.longitude, loc.displayName || origin.city || "Отправление");
+          });
+
+        var destReady = initialLoc(destination, destination.city, destination.country)
+          .then(function (loc) {
+            if (!loc) return;
+            mapState.destination = loc;
+            setMarker("destination", loc.latitude, loc.longitude, loc.displayName || destination.city || "Назначение");
+          });
+
+        Promise.all([originReady, destReady]).then(function () {
+          fitMapBounds();
+          updateMapRoute();
+        });
+      });
     }
 
     // Собирает route из mapState (координаты уже есть) + читает текстовые поля
@@ -1974,6 +2317,7 @@
           }
 
           config.populateFields(data, setField);
+          wireEditRouteMap(config, data, form);
         })
         .catch(function (err) {
           console.error(err);
@@ -1989,19 +2333,26 @@
       // PAYLOAD — общий для "Сохранить" и "На модерацию"
       // =========================
       function buildPayload() {
+        // ВАЖНО: схема route.origin / route.destination на бэке — это только
+        // { city, country, latitude, longitude }. Поля "address" там нет —
+        // адрес из формы используется только для более точного геокодинга
+        // (см. wireEditRouteMap → syncFromInput), но в payload не отправляется.
+        // Раньше мы добавляли address в origin/destination, из-за чего бэк
+        // отбрасывал обновление route целиком (остальные поля при этом
+        // сохранялись нормально — отсюда и был баг "всё обновляется, кроме
+        // точек отправления/прибытия").
         var origin = {
           country: getField("route.origin.country"),
-          city: getField("route.origin.city")
+          city: getField("route.origin.city"),
+          latitude: (mapState.origin && mapState.origin.latitude) || 0,
+          longitude: (mapState.origin && mapState.origin.longitude) || 0
         };
         var destination = {
           country: getField("route.destination.country"),
-          city: getField("route.destination.city")
+          city: getField("route.destination.city"),
+          latitude: (mapState.destination && mapState.destination.latitude) || 0,
+          longitude: (mapState.destination && mapState.destination.longitude) || 0
         };
-
-        if (config.withAddress) {
-          origin.address = getField("route.origin.address");
-          destination.address = getField("route.destination.address");
-        }
 
         var payload = {
           type: config.type,
@@ -2016,7 +2367,9 @@
       // Сохраняет текущее состояние формы. Используется и кнопкой
       // "Сохранить изменения", и кнопкой "Отправить на модерацию".
       function save() {
-        return API.listings.update(id, buildPayload());
+        return Promise.resolve(mapState.ready).then(function () {
+          return API.listings.update(id, buildPayload());
+        });
       }
 
       // =========================
@@ -2166,6 +2519,8 @@
           var route = listing.route || {};
           var origin = route.origin || {};
           var destination = route.destination || {};
+
+          wireDetailMap(route);
 
             // ===================================
             // OWNER
@@ -2356,6 +2711,8 @@
           var route = listing.route || {};
           var origin = route.origin || {};
           var destination = route.destination || {};
+
+          wireDetailMap(route);
 
             // ===================================
             // OWNER
