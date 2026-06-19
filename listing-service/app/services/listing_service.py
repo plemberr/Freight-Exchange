@@ -374,7 +374,51 @@ class ListingService:
                 listing.transport = Transport()
 
             _apply_partial_update(listing.transport, data.transport)
+        if data.route:
+            if listing.route is None:
+                # маршрута ещё не было — создаём (как в create_listing)
+                origin = Point(**data.route.origin.model_dump())
+                destination = Point(**data.route.destination.model_dump())
+                db.add_all([origin, destination])
+                db.flush()
 
+                listing.route = Route(
+                    listing_id=listing.id,
+                    origin_id=origin.id,
+                    destination_id=destination.id
+                )
+                db.flush()
+            else:
+                # обновляем существующие точки на месте
+                for attr in ("city", "country", "latitude", "longitude"):
+                    setattr(listing.route.origin, attr,
+                            getattr(data.route.origin, attr))
+                    setattr(listing.route.destination, attr,
+                            getattr(data.route.destination, attr))
+
+            # waypoints заменяем целиком (cascade delete-orphan уберёт старые)
+            listing.route.waypoints.clear()
+            db.flush()
+
+            for idx, wp in enumerate(data.route.waypoints):
+                point = Point(**wp.model_dump())
+                db.add(point)
+                db.flush()
+                listing.route.waypoints.append(
+                    RouteWaypoint(point_id=point.id, order_index=idx)
+                )
+
+            # пересчитываем дистанцию; не валим сохранение, если route-service недоступен
+            try:
+                route_data = await self.route_client.calculate_route(
+                    origin=data.route.origin.model_dump(),
+                    destination=data.route.destination.model_dump(),
+                    waypoints=[w.model_dump() for w in data.route.waypoints]
+                )
+                listing.route.distance_km = route_data["distanceKm"]
+            except Exception as e:
+                print(f"[update_listing] distance recalculation skipped: {e}")
+                
         # -------------------------
         # MODERATION
         # -------------------------

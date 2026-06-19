@@ -75,32 +75,47 @@
       <div class="container">
         <div class="search-panel">
           <h2 class="search-panel__title">Найти перевозку</h2>
-          <form class="search-panel__row">
+          <form class="search-panel__row" data-quick-search-form>
+            <div class="field">
+              <label class="field__label">Что ищете</label>
+              <select class="select" data-qs="searchType">
+                <option value="CARGO">Груз</option>
+                <option value="TRANSPORT">Транспорт</option>
+              </select>
+            </div>
             <div class="field">
               <label class="field__label">Откуда</label>
               <div class="input-icon">
                 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                <input class="input" type="text" placeholder="Город отправления">
+                <input class="input" type="text" placeholder="Город отправления" data-qs="origin">
               </div>
             </div>
             <div class="field">
               <label class="field__label">Куда</label>
               <div class="input-icon">
                 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                <input class="input" type="text" placeholder="Город назначения">
+                <input class="input" type="text" placeholder="Город назначения" data-qs="destination">
               </div>
             </div>
-            <div class="field">
+            <div class="field" data-qs-cargo-only>
               <label class="field__label">Тип груза</label>
-              <select class="select"><option>Выберите тип</option><option>Генеральный</option><option>Рефрижератор</option><option>Наливной</option></select>
+              <select class="select" data-qs="cargoType">
+                <option value="">Выберите тип</option>
+                <option value="BOX">Коробка</option>
+                <option value="PALLET">Паллет</option>
+                <option value="LIQUID">Наливной</option>
+                <option value="TENTED">Тентованный</option>
+                <option value="REFRIGERATED">Рефрижератор</option>
+                <option value="FLATBED">Бортовой</option>
+              </select>
             </div>
             <div class="field">
-              <label class="field__label">Вес, т</label>
-              <input class="input" type="text" placeholder="До 20 т">
+              <label class="field__label" data-qs-weight-label>Вес, кг</label>
+              <input class="input" type="number" min="0" placeholder="До 20000" data-qs="weight">
             </div>
             <div class="field">
               <label class="field__label">Объём, м³</label>
-              <input class="input" type="text" placeholder="До 83 м³">
+              <input class="input" type="number" min="0" placeholder="До 83" data-qs="volume">
             </div>
             <div class="field field--submit">
               <button class="btn btn--primary" type="submit">

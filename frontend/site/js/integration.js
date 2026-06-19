@@ -11,6 +11,7 @@
     document.addEventListener("DOMContentLoaded", function () {
       wireModeratorLink();   // на всех страницах: показать «Модерация» по роли из токена
       wireAuth();            // auth.html
+      wireQuickSearch();     // index.html — плашка быстрого поиска в hero
       wireSearch();          // search-cargo / search-transport
       wireCabinet();         // cabinet.html — мои объявления
       wireModerationQueue(); // moderator.html — очередь
@@ -165,6 +166,65 @@
     }
 
     // ============================================================
+    // ПЛАШКА БЫСТРОГО ПОИСКА (index.html, hero)
+    // ============================================================
+    function wireQuickSearch() {
+      var form = document.querySelector("[data-quick-search-form]");
+      if (!form) return;
+
+      var typeSelect = form.querySelector('[data-qs="searchType"]');
+      var cargoOnlyField = form.querySelector("[data-qs-cargo-only]");
+      var weightLabel = form.querySelector("[data-qs-weight-label]");
+
+      function syncFieldsToType() {
+        var isCargo = !typeSelect || typeSelect.value !== "TRANSPORT";
+        if (cargoOnlyField) cargoOnlyField.hidden = !isCargo;
+        if (weightLabel) weightLabel.textContent = isCargo ? "Вес, кг" : "Грузоподъёмность, кг";
+      }
+
+      if (typeSelect) {
+        typeSelect.addEventListener("change", syncFieldsToType);
+        syncFieldsToType();
+      }
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        var type = typeSelect ? typeSelect.value : "CARGO";
+        var isCargo = type !== "TRANSPORT";
+
+        function val(name) {
+          var el = form.querySelector('[data-qs="' + name + '"]');
+          return el ? el.value.trim() : "";
+        }
+
+        var params = new URLSearchParams();
+
+        var origin = val("origin");
+        var destination = val("destination");
+        var weight = val("weight");
+        var volume = val("volume");
+        var cargoType = val("cargoType");
+
+        if (origin) params.set("origin", origin);
+        if (destination) params.set("destination", destination);
+
+        if (isCargo) {
+          if (cargoType) params.set("cargoType", cargoType);
+          if (weight) params.set("maxWeight", weight);
+          if (volume) params.set("maxVolume", volume);
+        } else {
+          if (weight) params.set("maxMaxWeight", weight);
+          if (volume) params.set("maxMaxVolume", volume);
+        }
+
+        var target = isCargo ? "search-cargo.html" : "search-transport.html";
+        var qs = params.toString();
+        window.location.href = target + (qs ? "?" + qs : "");
+      });
+    }
+
+    // ============================================================
     // ПОИСК
     // ============================================================
     function wireSearch() {
@@ -188,12 +248,61 @@
 
       listEl.innerHTML = info("Загрузка объявлений…");
 
+      // Маппинг русских названий → enum-значения API (общий для applyParamsFromUrl и collectFilters)
+      var CARGO_TYPE_MAP = {
+        "Коробка":          "BOX",
+        "Паллет":           "PALLET",
+        "Насыпной":         "BULK",
+        "Генеральный":      "GENERAL",
+        "Наливной":         "LIQUID",
+        "Негабаритный":     "OVERSIZED",
+        "Рефрижераторный":  "REFRIGERATED"
+      };
+      var TRANSPORT_TYPE_MAP = {
+        "Тентованный":  "TENTED",
+        "Рефрижератор": "REFRIGERATED",
+        "Бортовой":     "FLATBED",
+        "Изотерм":      "ISOTHERMAL",
+        "Контейнер":    "CONTAINER",
+        "Самосвал":     "TIPPER",
+        "Автовоз":      "CAR_CARRIER"
+      };
+
       // --- Сортировка ---
       function sortParams() {
         var v = sortSel ? sortSel.value : "";
         if (v === "price" || v === "По цене")       return { sort: "price",      order: "asc"  };
         if (v === "distance" || v === "По расстоянию") return { sort: "distanceKm", order: "asc"  };
         return { sort: "created_at", order: "desc" };
+      }
+
+      // --- Подставить фильтры, переданные из плашки быстрого поиска (URL ?origin=...) ---
+      function applyParamsFromUrl() {
+        var params = new URLSearchParams(window.location.search);
+        if (![...params.keys()].length) return;
+
+        document.querySelectorAll("[data-filter]").forEach(function (el) {
+          var key = el.dataset.filter;
+          if (params.has(key)) el.value = params.get(key);
+        });
+
+        var cargoTypeParam = params.get("cargoType");
+        if (cargoTypeParam) {
+          document.querySelectorAll("[data-cargo-type]").forEach(function (cb) {
+            var raw = cb.dataset.cargoType;
+            var enumVal = CARGO_TYPE_MAP[raw] || raw;
+            cb.checked = enumVal === cargoTypeParam;
+          });
+        }
+
+        var transportTypeParam = params.get("transportType");
+        if (transportTypeParam) {
+          document.querySelectorAll("[data-transport-type]").forEach(function (cb) {
+            var raw = cb.dataset.transportType;
+            var enumVal = TRANSPORT_TYPE_MAP[raw] || raw;
+            cb.checked = enumVal === transportTypeParam;
+          });
+        }
       }
 
       // --- Собрать все фильтры из [data-filter] инпутов ---
@@ -207,26 +316,6 @@
           var val = el.value.trim();
           if (val !== "") q[key] = val;
         });
-
-        // Маппинг русских названий → enum-значения API
-        var CARGO_TYPE_MAP = {
-          "Коробка":          "BOX",
-          "Паллет":           "PALLET",
-          "Насыпной":         "BULK",
-          "Генеральный":      "GENERAL",
-          "Наливной":         "LIQUID",
-          "Негабаритный":     "OVERSIZED",
-          "Рефрижераторный":  "REFRIGERATED"
-        };
-        var TRANSPORT_TYPE_MAP = {
-          "Тентованный":  "TRUCK",
-          "Рефрижератор": "REFRIGERATED",
-          "Бортовой":     "FLATBED",
-          "Изотерм":      "ISOTHERMAL",
-          "Контейнер":    "CONTAINER",
-          "Самосвал":     "TIPPER",
-          "Автовоз":      "CAR_CARRIER"
-        };
 
         // Чекбоксы типа груза (CARGO)
         var checkedCargo = [];
@@ -294,14 +383,14 @@
         var meta = [];
         if (type === "CARGO") {
           if (it.cargoType) meta.push("<span>" + esc(it.cargoType) + "</span>");
-          if (it.weight   != null) meta.push("<span>" + fmtNum(it.weight)  + " кг</span>");
+          if (it.weight   != null) meta.push("<span>" + fmtNum(it.weight)  + " т</span>");
           if (it.volume   != null) meta.push("<span>" + fmtNum(it.volume)  + " м³</span>");
           if (it.length   != null) meta.push("<span>Д " + fmtNum(it.length) + " м</span>");
           if (it.width    != null) meta.push("<span>Ш " + fmtNum(it.width)  + " м</span>");
           if (it.height   != null) meta.push("<span>В " + fmtNum(it.height) + " м</span>");
         } else {
           if (it.transportType) meta.push("<span>" + esc(it.transportType) + "</span>");
-          if (it.maxWeight != null) meta.push("<span>до " + fmtNum(it.maxWeight) + " кг</span>");
+          if (it.maxWeight != null) meta.push("<span>до " + fmtNum(it.maxWeight) + " т</span>");
           if (it.maxVolume != null) meta.push("<span>до " + fmtNum(it.maxVolume) + " м³</span>");
         }
         var dateVal = it.createdAt || it.created_at;
@@ -334,6 +423,7 @@
         el.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); run(); } });
       });
 
+      applyParamsFromUrl();
       run();
     }
 
@@ -1223,8 +1313,8 @@
 
     // Маппинг русских названий из <select> → enum-значения бэка
     var CARGO_TYPE_MAP = {
-      "Генеральный": "GENERAL",
-      "Рефрижератор": "REFRIGERATED",
+      "Коробка": "BOX",
+      "Паллет": "PALLET",
       "Наливной": "LIQUID",
       "Выбрать": null
     };
@@ -1800,6 +1890,22 @@
       return geocodeAddress(query);
     }
 
+    // "Снимок" текущих текстовых полей маршрута (город/страна/адрес) для роли origin/destination.
+    // Используется, чтобы понять: соответствуют ли координаты в mapState тому, что СЕЙЧАС
+    // введено в полях формы, или поля поправили руками (без выбора подсказки геокодинга
+    // и без клика по карте) и координаты нужно пересчитать перед сохранением.
+    function routeFieldsKey(form, role, withAddress) {
+      function get(key) {
+        var el = form.querySelector('[data-field="' + key + '"]');
+        return el ? el.value : "";
+      }
+      return [
+        get("route." + role + ".city"),
+        get("route." + role + ".country"),
+        withAddress ? get("route." + role + ".address") : ""
+      ].join("\u0001");
+    }
+
     // Карта на странице редактирования (edit-cargo.html / edit-transport.html)
     function wireEditRouteMap(config, data, form) {
       var mapBoxEl = form.querySelector(".map-box");
@@ -1816,6 +1922,7 @@
         var originReady = initialLoc(data.route && data.route.origin, data.route?.origin?.city, data.route?.origin?.country)
           .then(function (loc) {
             if (!loc) return;
+            loc._fieldsKey = routeFieldsKey(form, "origin", config.withAddress);
             mapState.origin = loc;
             setMarker("origin", loc.latitude, loc.longitude, loc.displayName || "Отправление");
           });
@@ -1823,6 +1930,7 @@
         var destReady = initialLoc(data.route && data.route.destination, data.route?.destination?.city, data.route?.destination?.country)
           .then(function (loc) {
             if (!loc) return;
+            loc._fieldsKey = routeFieldsKey(form, "destination", config.withAddress);
             mapState.destination = loc;
             setMarker("destination", loc.latitude, loc.longitude, loc.displayName || "Назначение");
           });
@@ -1838,17 +1946,20 @@
             setField("route.origin.city", loc.city || "");
             if (loc.country) setField("route.origin.country", loc.country);
             if (config.withAddress) setField("route.origin.address", loc.displayName || "");
+            if (mapState.origin) mapState.origin._fieldsKey = routeFieldsKey(form, "origin", config.withAddress);
           },
           onDestinationPlaced: function (loc) {
             setField("route.destination.city", loc.city || "");
             if (loc.country) setField("route.destination.country", loc.country);
             if (config.withAddress) setField("route.destination.address", loc.displayName || "");
+            if (mapState.destination) mapState.destination._fieldsKey = routeFieldsKey(form, "destination", config.withAddress);
           }
         });
 
         // Двусторонняя синхронизация: правка текстовых полей тоже двигает карту
         function syncFromInput(input, role) {
           attachGeocodeInput(input, role, function (coords) {
+            coords._fieldsKey = routeFieldsKey(form, role, config.withAddress);
             if (role === "origin") mapState.origin = coords; else mapState.destination = coords;
             setMarker(role, coords.latitude, coords.longitude, coords.displayName);
             fitMapBounds();
@@ -2250,6 +2361,36 @@
             alert("Не удалось сохранить изменения");
           });
       });
+
+      // --- Удаление аккаунта ---
+      var deleteBtn = document.querySelector("[data-delete-account-btn]");
+      if (deleteBtn) {
+        deleteBtn.addEventListener("click", function () {
+          var sure = window.confirm(
+            "Удалить аккаунт безвозвратно? Все ваши объявления тоже будут удалены. Это действие нельзя отменить."
+          );
+          if (!sure) return;
+
+          deleteBtn.disabled = true;
+          var originalHtml = deleteBtn.innerHTML;
+          deleteBtn.textContent = "Удаление…";
+
+          API.users.deleteMe()
+            .then(function () {
+              return API.auth.logout().catch(function () {
+                // logout мог не пройти, но аккаунт уже удалён — это не критично
+              });
+            })
+            .then(function () {
+              window.location.href = "index.html";
+            })
+            .catch(function (err) {
+              window.location.href = "index.html";
+              deleteBtn.disabled = false;
+              deleteBtn.innerHTML = originalHtml;
+            });
+        });
+      }
     }
 
     // ============================================================
@@ -2332,6 +2473,45 @@
       // =========================
       // PAYLOAD — общий для "Сохранить" и "На модерацию"
       // =========================
+
+      // Перед сохранением проверяет: совпадает ли то, что сейчас в полях формы
+      // (город/страна/адрес), с тем, из чего были посчитаны координаты в mapState.
+      // Если нет — значит, поля поправили руками без выбора подсказки/клика по карте,
+      // и нужно перегеокодировать прямо сейчас, иначе в payload уйдут старые координаты,
+      // не соответствующие новому тексту (это и было причиной "маршрут не обновляется").
+      function syncRouteCoordsWithFields() {
+        function syncOne(role) {
+          var key = routeFieldsKey(form, role, config.withAddress);
+          var current = mapState[role];
+          if (current && current._fieldsKey === key) {
+            return Promise.resolve();
+          }
+
+          var cityVal = getField("route." + role + ".city");
+          var countryVal = getField("route." + role + ".country");
+          var addressVal = config.withAddress ? getField("route." + role + ".address") : "";
+          var query = [addressVal, cityVal, countryVal].filter(Boolean).join(", ");
+
+          return geocodeAddress(query).then(function (loc) {
+            if (!loc) {
+              loc = { latitude: 0, longitude: 0, city: cityVal, country: countryVal, displayName: query };
+            }
+            loc._fieldsKey = key;
+            mapState[role] = loc;
+            if (mapState.map && loc.latitude) {
+              setMarker(role, loc.latitude, loc.longitude, loc.displayName || cityVal || countryVal);
+            }
+          });
+        }
+
+        return Promise.all([syncOne("origin"), syncOne("destination")]).then(function () {
+          if (mapState.map) {
+            fitMapBounds();
+            updateMapRoute();
+          }
+        });
+      }
+
       function buildPayload() {
         // ВАЖНО: схема route.origin / route.destination на бэке — это только
         // { city, country, latitude, longitude }. Поля "address" там нет —
@@ -2356,7 +2536,7 @@
 
         var payload = {
           type: config.type,
-          title: getField("title"),
+          title: buildTitle(origin.city, origin.country, destination.city, destination.country),
           description: getField("description"),
           route: { origin: origin, destination: destination, waypoints: [] }
         };
@@ -2367,9 +2547,11 @@
       // Сохраняет текущее состояние формы. Используется и кнопкой
       // "Сохранить изменения", и кнопкой "Отправить на модерацию".
       function save() {
-        return Promise.resolve(mapState.ready).then(function () {
-          return API.listings.update(id, buildPayload());
-        });
+        return Promise.resolve(mapState.ready)
+          .then(function () { return syncRouteCoordsWithFields(); })
+          .then(function () {
+            return API.listings.update(id, buildPayload());
+          });
       }
 
       // =========================

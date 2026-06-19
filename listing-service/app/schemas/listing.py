@@ -31,7 +31,7 @@ class UpdateListingRequest(BaseModel):
 
     cargo: CargoRequest | None = None
     transport: TransportRequest | None = None
-
+    route: RouteRequest | None = None
 
 class ListingResponse(BaseModel):
 
